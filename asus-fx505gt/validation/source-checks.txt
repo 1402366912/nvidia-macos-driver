@@ -1,0 +1,3 @@
+PASS: final complete patch applies to pinned input bytes; all seven output SHA-256 hashes match manifest
+PASS: apply tool Python syntax and shell syntax
+PASS: default-off plist values verified

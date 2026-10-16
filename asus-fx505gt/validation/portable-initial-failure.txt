@@ -1,0 +1,15 @@
+In file included from /tmp/fx505gt-profile-bridge/deliverable/tests/policy_test.cpp:2:
+/tmp/fx505gt-profile-bridge/deliverable/include/FXProfilePolicy.hpp: In member function ‘void fx::Policy::configure(bool, bool, bool, bool)’:
+/tmp/fx505gt-profile-bridge/deliverable/include/FXProfilePolicy.hpp:37:29: error: enumerated and non-enumerated type in conditional expression [-Werror=extra]
+   37 |         s_.flags = (enabled ? FXEnabledFlag : 0u) |
+      |                     ~~~~~~~~^~~~~~~~~~~~~~~~~~~~
+/tmp/fx505gt-profile-bridge/deliverable/include/FXProfilePolicy.hpp:38:28: error: enumerated and non-enumerated type in conditional expression [-Werror=extra]
+   38 |             (modelDeclared ? FXModelDeclaredFlag : 0u) |
+      |              ~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~
+/tmp/fx505gt-profile-bridge/deliverable/include/FXProfilePolicy.hpp:39:26: error: enumerated and non-enumerated type in conditional expression [-Werror=extra]
+   39 |             (wmiVerified ? FXWMIVerifiedFlag : 0u) |
+      |              ~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~
+/tmp/fx505gt-profile-bridge/deliverable/include/FXProfilePolicy.hpp:40:24: error: enumerated and non-enumerated type in conditional expression [-Werror=extra]
+   40 |             (fnEnabled ? FXFnF5EnabledFlag : 0u);
+      |              ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~
+cc1plus: all warnings being treated as errors

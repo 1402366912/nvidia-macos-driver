@@ -1,0 +1,829 @@
+diff --git a/AsusSMC/AsusSMC.cpp b/AsusSMC/AsusSMC.cpp
+--- a/AsusSMC/AsusSMC.cpp
++++ b/AsusSMC/AsusSMC.cpp
+@@ -39,20 +39,14 @@
+         return NULL;
+     }
+ 
+-    OSObject *obj;
+-    dev->evaluateObject("_UID", &obj);
+-
+-    OSString *name = OSDynamicCast(OSString, obj);
+-    if (!name) {
+-        return NULL;
+-    }
+-
+-    IOService *ret = NULL;
+-    if (name->isEqualTo("ATK")) {
+-        ret = this;
+-    }
+-    name->release();
+-
++    OSObject *obj = nullptr;
++    if (dev->evaluateObject("_UID", &obj) != kIOReturnSuccess) {
++        if (obj) obj->release();
++        return nullptr;
++    }
++    auto name = OSDynamicCast(OSString, obj);
++    IOService *ret = name && name->isEqualTo("ATK") ? this : nullptr;
++    if (obj) obj->release();
+     return ret;
+ }
+ 
+@@ -62,7 +56,8 @@
+         return false;
+     }
+ 
+-    atkDevice = (IOACPIPlatformDevice *)provider;
++    atkDevice = OSDynamicCast(IOACPIPlatformDevice, provider);
++    if (!atkDevice) return false;
+ 
+     parse_WDG();
+ 
+@@ -106,30 +101,32 @@
+ 
+     registerVSMC();
+ 
++    FXGateCall profileStart {};
++    profileStart.operation = FXGateCall::Initialize;
++    if (fxRun(profileStart) != kIOReturnSuccess) return false;
++
+     registerService();
+ 
+     return true;
+ }
+ 
+ void AsusSMC::stop(IOService *provider) {
++    FXGateCall profileStop {};
++    profileStop.operation = FXGateCall::Stop;
++    (void)fxRun(profileStop);
++    if (fxPowerNotifier) { fxPowerNotifier->remove(); fxPowerNotifier = nullptr; }
+     if (poller) {
+         poller->cancelTimeout();
+     }
+     if (workloop && poller) {
+         workloop->removeEventSource(poller);
+     }
+-    if (workloop && command_gate) {
+-        workloop->removeEventSource(command_gate);
+-    }
+-    OSSafeReleaseNULL(workloop);
+     OSSafeReleaseNULL(poller);
+-    OSSafeReleaseNULL(command_gate);
+-
+-    _publishNotify->remove();
+-    _terminateNotify->remove();
+-    _notificationServices->flushCollection();
+-    OSSafeReleaseNULL(_publishNotify);
+-    OSSafeReleaseNULL(_terminateNotify);
++    // Keep the gate/workloop alive until free: outstanding clients may still
++    // hold this stopped service, and must receive NotAttached without a race.
++    if (_publishNotify) { _publishNotify->remove(); _publishNotify = nullptr; }
++    if (_terminateNotify) { _terminateNotify->remove(); _terminateNotify = nullptr; }
++    if (_notificationServices) _notificationServices->flushCollection();
+     OSSafeReleaseNULL(_notificationServices);
+ 
+     OSSafeReleaseNULL(kbdDevice);
+@@ -138,37 +135,55 @@
+     return;
+ }
+ 
++void AsusSMC::free() {
++    if (fxPowerNotifier) { fxPowerNotifier->remove(); fxPowerNotifier = nullptr; }
++    if (workloop && command_gate) workloop->removeEventSource(command_gate);
++    OSSafeReleaseNULL(command_gate);
++    OSSafeReleaseNULL(workloop);
++    OSSafeReleaseNULL(_notificationServices);
++    super::free();
++}
++
+ IOReturn AsusSMC::message(uint32_t type, IOService *provider, void *argument) {
+-    DBGLOG("atk", "Received message: %u Type %x Provider %s", *((uint32_t *)argument), type, provider ? provider->getName() : "unknown");
+-
++    FXGateCall call {};
++    call.operation = FXGateCall::Message;
++    call.arrivalNS = fxTimestamp();
++    call.messageType = type;
++    call.messageProvider = provider;
++    call.messageArgument = argument;
++    return fxRun(call);
++}
++
++IOReturn AsusSMC::fxMessage(uint32_t type, IOService *provider, void *argument, uint64_t arrivalNS) {
++    if (!argument) return kIOReturnBadArgument;
+     switch (type) {
+-        case kIOACPIMessageDeviceNotification:
+-        {
+-            if (directACPImessaging) {
+-                handleMessage(*((uint32_t *)argument));
+-            } else {
+-                uint32_t event = *((uint32_t *)argument);
++        case kIOACPIMessageDeviceNotification: {
++            if (provider != atkDevice) return kIOReturnBadArgument;
++            uint32_t event = *static_cast<uint32_t *>(argument);
++            uint32_t code = event;
++            if (!directACPImessaging) {
+                 OSNumber *arg = OSNumber::withNumber(event, 32);
+-                uint32_t res;
+-                atkDevice->evaluateInteger("_WED", &res, (OSObject **)&arg, 1);
++                if (!arg) return kIOReturnNoMemory;
++                IOReturn ret = atkDevice->evaluateInteger("_WED", &code,
++                                                         (OSObject **)&arg, 1);
+                 arg->release();
+-                handleMessage(res);
++                if (ret != kIOReturnSuccess) return ret;
+             }
+-            break;
+-        }
+-
+-        case kSetKeyboardBacklightMessage:
+-        {
++            fxHandleFn(code, arrivalNS);
++            handleMessage(code); // Existing HID/Fn mappings remain intact.
++            break;
++        }
++        case kSetKeyboardBacklightMessage: {
+             if (hasKeyboardBacklight) {
+-                OSNumber *arg = OSNumber::withNumber(*((uint16_t *)argument) / 16, 16);
+-                atkDevice->evaluateObject("SKBV", NULL, (OSObject **)&arg, 1);
++                OSNumber *arg = OSNumber::withNumber(*static_cast<uint16_t *>(argument) / 16, 16);
++                if (!arg) return kIOReturnNoMemory;
++                IOReturn ret = atkDevice->evaluateObject("SKBV", nullptr, (OSObject **)&arg, 1);
+                 arg->release();
++                return ret;
+             }
+             break;
+         }
+-
+-        default:
+-            return kIOReturnInvalid;
++        default: return kIOReturnInvalid;
+     }
+     return kIOReturnSuccess;
+ }
+@@ -238,36 +253,43 @@
+ }
+ 
+ void AsusSMC::parse_WDG() {
+-    OSObject *wdg;
+-    if (atkDevice->evaluateObject("_WDG", &wdg) != kIOReturnSuccess) {
+-        SYSLOG("wmi", "No method _WDG!");
+-        return;
+-    }
+-
+-    OSData *data = OSDynamicCast(OSData, wdg);
+-    if (!data) {
+-        SYSLOG("guid", "Cast WDG error!");
+-        return;
+-    }
+-
+-    int total = data->getLength() / sizeof(struct guid_block);
+-
+-    char guid_string[37];
+-
+-    for (int i = 0; i < total; i++) {
+-        struct guid_block *g = (struct guid_block *) data->getBytesNoCopy(i * sizeof(struct guid_block), sizeof(struct guid_block));
+-        wmi_parse_guid(g->guid, guid_string);
+-
+-        if (strncmp(guid_string, ASUS_WMI_MGMT_GUID, 36) == 0) {
+-            snprintf(wmi_method, 5, "WM%c%c", g->object_id[0], g->object_id[1]);
+-            DBGLOG("wmi", "parse_WDG found WMI method %s", wmi_method);
+-            return;
+-        }
+-    }
+-
+-    // Couldn't find WMI method. Let's assume it's WMNB
+-    SYSLOG("wmi", "parse_WDG couldn't find WMI method");
+-    lilu_os_strncpy(wmi_method, "WMNB", 5);
++    fxWmiVerified = false;
++    // Retain the historical fallback for upstream features only. Profile
++    // reads/writes require a real, validated management-GUID method below.
++    lilu_os_strncpy(wmi_method, "WMNB", sizeof(wmi_method));
++    OSObject *object = nullptr;
++    if (atkDevice->evaluateObject("_WDG", &object) != kIOReturnSuccess) {
++        if (object) object->release();
++        return;
++    }
++    auto data = OSDynamicCast(OSData, object);
++    if (!data || data->getLength() % sizeof(guid_block)) {
++        if (object) object->release();
++        return;
++    }
++    const uint32_t total = data->getLength() / sizeof(guid_block);
++    for (uint32_t i = 0; i < total; ++i) {
++        const auto g = static_cast<const guid_block *>(data->getBytesNoCopy(
++            i * sizeof(guid_block), sizeof(guid_block)));
++        if (!g) continue;
++        char guid[37];
++        wmi_parse_guid(g->guid, guid);
++        if (strncmp(guid, ASUS_WMI_MGMT_GUID, 36) != 0 ||
++            !(g->flags & 0x02u) || !g->instance_count) continue;
++        bool valid = true;
++        for (unsigned j = 0; j < 2; ++j) {
++            char c = g->object_id[j];
++            valid = valid && ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_');
++        }
++        if (!valid) continue;
++        char method[5];
++        snprintf(method, sizeof(method), "WM%c%c", g->object_id[0], g->object_id[1]);
++        if (atkDevice->validateObject(method) != kIOReturnSuccess) continue;
++        lilu_os_strncpy(wmi_method, method, sizeof(wmi_method));
++        fxWmiVerified = true;
++        break;
++    }
++    object->release();
+ }
+ 
+ void AsusSMC::initATKDevice() {
+@@ -934,3 +956,5 @@
+     // It is not safe to unload VirtualSMC plugins!
+     return KERN_FAILURE;
+ }
++
++#include "FXProfileBridge.inc"
+diff --git a/AsusSMC/AsusSMC.hpp b/AsusSMC/AsusSMC.hpp
+--- a/AsusSMC/AsusSMC.hpp
++++ b/AsusSMC/AsusSMC.hpp
+@@ -11,6 +11,10 @@
+ #include <IOKit/IOTimerEventSource.h>
+ #include <IOKit/IOCommandGate.h>
+ #include <IOKit/acpi/IOACPIPlatformDevice.h>
++#include "FXProfileBridge.hpp"
++#include <IOKit/pwr_mgt/RootDomain.h>
++#include <IOKit/pwr_mgt/IOPM.h>
++#include <IOKit/IOMessage.h>
+ #include "HIDReport.hpp"
+ #include "HIDUsageTables.h"
+ #include "VirtualAppleKeyboard.hpp"
+@@ -41,6 +45,9 @@
+ 
+ public:
+     bool init(OSDictionary *dictionary) override;
++    void free() override;
++    IOReturn newUserClient(task_t owningTask, void *securityID, UInt32 type,
++                           OSDictionary *properties, IOUserClient **handler) override;
+     bool start(IOService *provider) override;
+     void stop(IOService *provider) override;
+     IOService *probe(IOService *provider, SInt32 *score) override;
+@@ -54,6 +61,22 @@
+     void displayOff();
+ 
+ private:
++    friend class AsusSMCProfileUserClient;
++    fx::Policy fxPolicy;
++    bool fxWmiVerified {false};
++    bool fxRunning {false};
++    IONotifier *fxPowerNotifier {nullptr};
++    IOReturn fxRun(FXGateCall &call);
++    static IOReturn fxGateAction(OSObject *owner, void *arg0, void *, void *, void *);
++    IOReturn fxMessage(uint32_t type, IOService *provider, void *argument, uint64_t arrivalNS);
++    static uint64_t fxTimestamp();
++    static IOReturn fxPowerInterest(void *target, void *reference, UInt32 type,
++                                   IOService *provider, void *argument, vm_size_t size);
++    fx::Raw fxEvaluate(uint32_t method, uint32_t device, uint32_t value);
++    void fxRefresh();
++    IOReturn fxSet(uint32_t profile, uint32_t source);
++    void fxHandleFn(uint32_t code, uint64_t arrivalNS);
++
+     struct guid_block {
+         char guid[16];
+         union {
+@@ -93,7 +116,7 @@
+     static constexpr uint8_t NOTIFY_BRIGHTNESS_DOWN_MIN = 0x20;
+     static constexpr uint8_t NOTIFY_BRIGHTNESS_DOWN_MAX = 0x2F;
+ 
+-    char wmi_method[5];
++    char wmi_method[5] {"WMNB"};
+     int wmi_parse_guid(const char *in, char *out);
+     int wmi_evaluate_method(uint32_t method_id, uint32_t arg0, uint32_t arg1);
+     int wmi_get_devstate(uint32_t dev_id);
+diff --git a/AsusSMC/Info.plist b/AsusSMC/Info.plist
+--- a/AsusSMC/Info.plist
++++ b/AsusSMC/Info.plist
+@@ -37,6 +37,13 @@
+ 				<string>ASUS0010</string>
+ 				<string>ATK0100</string>
+ 			</array>
++			<!-- Opt-in only. Model is an operator declaration, not measured identity. -->
++			<key>FX505GTProfileBridgeEnabled</key>
++			<false/>
++			<key>FX505GTProfileModel</key>
++			<string></string>
++			<key>FX505GTProfileFnF5Enabled</key>
++			<false/>
+ 			<key>IOProbeScore</key>
+ 			<integer>9999</integer>
+ 			<key>IOProviderClass</key>
+diff --git a/AsusSMC/FXProfileABI.h b/AsusSMC/FXProfileABI.h
+new file mode 100644
+--- /dev/null
++++ b/AsusSMC/FXProfileABI.h
+@@ -0,0 +1,46 @@
++/* SPDX-License-Identifier: MIT
++ * Fixed FX505GT firmware-profile interface. No generic ACPI/WMI/EC selectors.
++ */
++#ifndef FX_PROFILE_ABI_H
++#define FX_PROFILE_ABI_H
++#include <stdint.h>
++#define FX_PROFILE_ABI_VERSION 1u
++#define FX_PROFILE_CONNECT_TYPE 0x46583550u
++#define FX_PROFILE_UNKNOWN 0xffffffffu
++#define FX_PROFILE_SERVICE "AsusSMC"
++enum FXSelector { FXQuery = 0, FXSetProfile = 1 };
++enum FXProfile { FXNormal = 0, FXOverboost = 1, FXSilent = 2 };
++enum FXBackend { FXNoBackend = 0, FXFanBoost = 1, FXThermalPolicy = 2 };
++enum FXState {
++    FXDisabled = 0, FXModelNotDeclared = 1, FXWMIMethodUnverified = 2,
++    FXUnprobed = 3, FXUnsupported = 4, FXFirmwareError = 5,
++    FXReady = 6, FXStopped = 7, FXSuspended = 8, FXPowerNotifierUnavailable = 9
++};
++enum FXRawStatus { FXNotRead = 0, FXRawOK = 1, FXTransportError = 2, FXInvalidMethod = 3 };
++enum FXRequestStatus {
++    FXNeverRequested = 0, FXAccepted = 1, FXRejected = 2,
++    FXWriteTransportError = 3, FXWriteInvalidMethod = 4, FXWriteUnexpectedResult = 5
++};
++enum FXSource { FXNoSource = 0, FXCommandLine = 1, FXFnF5 = 2 };
++enum FXFlags {
++    FXEnabledFlag = 1u << 0, FXModelDeclaredFlag = 1u << 1,
++    FXModelVerifiedFlag = 1u << 2, /* Reserved: never asserted by v1. */
++    FXWMIVerifiedFlag = 1u << 3, FXFnF5EnabledFlag = 1u << 4
++};
++/* All fields are fixed-width; no pointers, bools, native enums or padding. */
++typedef struct FXProfileSnapshot {
++    uint32_t version, size, state, flags;
++    uint32_t backend, supportedProfiles, currentProfile, reserved0;
++    uint32_t thermalProbeStatus, thermalProbeRaw, thermalProbeIOReturn;
++    uint32_t fanProbeStatus, fanProbeRaw, fanProbeIOReturn;
++    uint32_t lastRequestedProfile, lastRequestSource, lastRequestStatus;
++    uint32_t lastWriteRawStatus, lastWriteRaw, lastWriteIOReturn;
++    uint32_t lastAcceptedProfile, lastAcceptedSource, acceptedCount;
++    uint32_t fnEventCount, fnSuppressedCount, reserved1;
++    uint32_t lastRequestUptimeLo, lastRequestUptimeHi;
++    uint32_t lastAcceptedUptimeLo, lastAcceptedUptimeHi;
++} FXProfileSnapshot;
++#ifdef __cplusplus
++static_assert(sizeof(FXProfileSnapshot) == 30 * sizeof(uint32_t), "FX ABI changed");
++#endif
++#endif
+diff --git a/AsusSMC/FXProfilePolicy.hpp b/AsusSMC/FXProfilePolicy.hpp
+new file mode 100644
+--- /dev/null
++++ b/AsusSMC/FXProfilePolicy.hpp
+@@ -0,0 +1,164 @@
++/* SPDX-License-Identifier: MIT
++ * Independently written policy. Protocol facts: pinned faustus, see SOURCES.md.
++ * This file deliberately contains no IOKit, ACPI or device I/O.
++ */
++#ifndef FX_PROFILE_POLICY_HPP
++#define FX_PROFILE_POLICY_HPP
++#include "FXProfileABI.h"
++namespace fx {
++static const uint32_t ThermalDevice = 0x00120075u;
++static const uint32_t FanBoostDevice = 0x00110018u;
++static const uint32_t Presence = 0x00010000u;
++static const uint64_t DebounceNS = 250000000ull;
++struct Raw {
++    uint32_t status, value, ioReturn;
++    static Raw unread() { return {FXNotRead, 0, 0}; }
++    static Raw decode(bool ok, uint32_t value, uint32_t ioReturn) {
++        if (!ok) return {FXTransportError, 0, ioReturn};
++        if (value == 0xfffffffeu || value == 0xffffffffu)
++            return {FXInvalidMethod, value, ioReturn};
++        return {FXRawOK, value, ioReturn};
++    }
++};
++class Policy {
++    FXProfileSnapshot s_ {};
++    bool fnSeen_ {false};
++    uint64_t lastFnNS_ {0};
++public:
++    Policy() {
++        s_.version = FX_PROFILE_ABI_VERSION;
++        s_.size = sizeof(s_);
++        s_.currentProfile = FX_PROFILE_UNKNOWN;
++        s_.lastRequestedProfile = FX_PROFILE_UNKNOWN;
++        s_.lastAcceptedProfile = FX_PROFILE_UNKNOWN;
++    }
++    const FXProfileSnapshot &snapshot() const { return s_; }
++    void configure(bool enabled, bool modelDeclared, bool wmiVerified, bool fnEnabled) {
++        s_.flags = (enabled ? static_cast<uint32_t>(FXEnabledFlag) : 0u) |
++            (modelDeclared ? static_cast<uint32_t>(FXModelDeclaredFlag) : 0u) |
++            (wmiVerified ? static_cast<uint32_t>(FXWMIVerifiedFlag) : 0u) |
++            (fnEnabled ? static_cast<uint32_t>(FXFnF5EnabledFlag) : 0u);
++        s_.state = !enabled ? FXDisabled : !modelDeclared ? FXModelNotDeclared :
++            !wmiVerified ? FXWMIMethodUnverified : FXUnprobed;
++    }
++    bool mayProbe() const {
++        return s_.state == FXUnprobed || s_.state == FXUnsupported ||
++            s_.state == FXFirmwareError || s_.state == FXReady;
++    }
++    void probe(Raw thermal, Raw fan) {
++        if (!mayProbe()) return;
++        s_.thermalProbeStatus = thermal.status;
++        s_.thermalProbeRaw = thermal.value;
++        s_.thermalProbeIOReturn = thermal.ioReturn;
++        s_.fanProbeStatus = fan.status;
++        s_.fanProbeRaw = fan.value;
++        s_.fanProbeIOReturn = fan.ioReturn;
++        uint32_t oldBackend = s_.backend, oldMask = s_.supportedProfiles;
++        s_.backend = FXNoBackend;
++        s_.supportedProfiles = 0;
++        if (thermal.status == FXRawOK && (thermal.value & Presence)) {
++            s_.backend = FXThermalPolicy;
++            s_.supportedProfiles = 7u;
++        } else if (fan.status == FXRawOK && (fan.value & Presence) && (fan.value & 3u)) {
++            s_.backend = FXFanBoost;
++            s_.supportedProfiles = 1u | ((fan.value & 3u) << 1);
++        }
++        if (s_.backend != FXNoBackend) s_.state = FXReady;
++        else if (thermal.status == FXTransportError || fan.status == FXTransportError) s_.state = FXFirmwareError;
++        else s_.state = FXUnsupported;
++        if (oldBackend != s_.backend || oldMask != s_.supportedProfiles) {
++            s_.lastAcceptedProfile = FX_PROFILE_UNKNOWN;
++            s_.lastAcceptedSource = FXNoSource;
++            s_.lastAcceptedUptimeLo = s_.lastAcceptedUptimeHi = 0;
++        }
++        /* Never derive currentProfile from DSTS: low bits are capabilities. */
++    }
++    uint32_t device() const {
++        return s_.backend == FXThermalPolicy ? ThermalDevice :
++            s_.backend == FXFanBoost ? FanBoostDevice : 0u;
++    }
++    bool prepare(uint32_t profile, uint32_t source, uint64_t nowNS = 0) {
++        if (source != FXCommandLine && source != FXFnF5) return false;
++        s_.lastRequestedProfile = profile;
++        s_.lastRequestSource = source;
++        s_.lastRequestStatus = FXRejected;
++        s_.lastRequestUptimeLo = static_cast<uint32_t>(nowNS);
++        s_.lastRequestUptimeHi = static_cast<uint32_t>(nowNS >> 32);
++        s_.lastWriteRawStatus = FXNotRead;
++        s_.lastWriteRaw = s_.lastWriteIOReturn = 0;
++        if (s_.state != FXReady || profile > FXSilent ||
++            !(s_.supportedProfiles & (1u << profile))) return false;
++        s_.lastRequestStatus = FXNeverRequested;
++        return true;
++    }
++    bool complete(Raw result, uint64_t nowNS = 0) {
++        s_.lastWriteRawStatus = result.status;
++        s_.lastWriteRaw = result.value;
++        s_.lastWriteIOReturn = result.ioReturn;
++        if (result.status == FXTransportError) s_.lastRequestStatus = FXWriteTransportError;
++        else if (result.status == FXInvalidMethod) s_.lastRequestStatus = FXWriteInvalidMethod;
++        else if (result.status != FXRawOK || result.value != 1u)
++            s_.lastRequestStatus = FXWriteUnexpectedResult;
++        else {
++            s_.lastRequestStatus = FXAccepted;
++            s_.lastAcceptedProfile = s_.lastRequestedProfile;
++            s_.lastAcceptedSource = s_.lastRequestSource;
++            s_.lastAcceptedUptimeLo = static_cast<uint32_t>(nowNS);
++            s_.lastAcceptedUptimeHi = static_cast<uint32_t>(nowNS >> 32);
++            ++s_.acceptedCount;
++            return true;
++        }
++        /* A failed/ambiguous write may have changed hardware. Never treat an
++         * earlier accepted command as the current state or cycle anchor. */
++        s_.lastAcceptedProfile = FX_PROFILE_UNKNOWN;
++        s_.lastAcceptedSource = FXNoSource;
++        s_.lastAcceptedUptimeLo = s_.lastAcceptedUptimeHi = 0;
++        return false;
++    }
++    bool fnEvent(uint32_t code, uint64_t nowNS, uint32_t &requested) {
++        if (code != 0x99u && code != 0xaeu) return false;
++        ++s_.fnEventCount;
++        if (s_.state != FXReady || !(s_.flags & FXFnF5EnabledFlag)) return false;
++        if ((s_.backend == FXFanBoost && code != 0x99u) ||
++            (s_.backend == FXThermalPolicy && code != 0xaeu)) return false;
++        if (fnSeen_ && nowNS >= lastFnNS_ && nowNS - lastFnNS_ < DebounceNS) {
++            ++s_.fnSuppressedCount;
++            return false;
++        }
++        fnSeen_ = true;
++        lastFnNS_ = nowNS;
++        /* Unknown after attach/error/backend change: explicitly request normal
++         * first. Otherwise cycle the last accepted command, not a measurement. */
++        if (s_.lastAcceptedProfile == FX_PROFILE_UNKNOWN) { requested = FXNormal; return true; }
++        for (uint32_t n = 1; n <= 3; ++n) {
++            uint32_t p = (s_.lastAcceptedProfile + n) % 3;
++            if (s_.supportedProfiles & (1u << p)) { requested = p; return true; }
++        }
++        return false;
++    }
++    void invalidate() {
++        s_.lastAcceptedProfile = FX_PROFILE_UNKNOWN;
++        s_.lastAcceptedSource = FXNoSource;
++        s_.lastAcceptedUptimeLo = s_.lastAcceptedUptimeHi = 0;
++        fnSeen_ = false;
++        lastFnNS_ = 0;
++    }
++    void suspend() { invalidate(); if (mayProbe()) s_.state = FXSuspended; }
++    void resume() { invalidate(); if (s_.state == FXSuspended) s_.state = FXUnprobed; }
++    // Public IOPM flags: WillChange=1, DidChange=2; CPU|Graphics=3.
++    // Initial priority-interest synchronization has flags=0, from=0.
++    void powerCapabilities(uint32_t flags, uint32_t from, uint32_t to) {
++        if (flags & ~3u) { suspend(); return; }
++        if (flags & 1u) { suspend(); return; }
++        if ((flags & 2u) || (flags == 0 && from == 0)) {
++            if ((to & 3u) == 3u) resume(); else suspend();
++        } else suspend();
++    }
++    void powerUnavailable() {
++        invalidate();
++        if (mayProbe() || s_.state == FXSuspended) s_.state = FXPowerNotifierUnavailable;
++    }
++    void stop() { invalidate(); s_.state = FXStopped; }
++};
++}
++#endif
+diff --git a/AsusSMC/FXProfileBridge.hpp b/AsusSMC/FXProfileBridge.hpp
+new file mode 100644
+--- /dev/null
++++ b/AsusSMC/FXProfileBridge.hpp
+@@ -0,0 +1,33 @@
++/* SPDX-License-Identifier: MIT */
++#ifndef FX_PROFILE_BRIDGE_HPP
++#define FX_PROFILE_BRIDGE_HPP
++#include <IOKit/IOUserClient.h>
++#include <IOKit/IOLocks.h>
++#include "FXProfilePolicy.hpp"
++class AsusSMC;
++struct FXGateCall {
++    enum Operation { Initialize, Query, Set, Message, Suspend, Capabilities, Stop } operation;
++    uint64_t arrivalNS {0};
++    uint32_t powerFlags {0}, powerFrom {0}, powerTo {0};
++    uint32_t profile {0}, messageType {0};
++    IOService *messageProvider {nullptr};
++    void *messageArgument {nullptr};
++    FXProfileSnapshot *snapshot {nullptr};
++};
++class AsusSMCProfileUserClient : public IOUserClient {
++    OSDeclareDefaultStructors(AsusSMCProfileUserClient)
++    IOLock *providerLock_ {nullptr};
++    AsusSMC *asus_ {nullptr};
++    task_t ownerTask_ {TASK_NULL};
++public:
++    bool initWithTask(task_t task, void *securityID, UInt32 type,
++                      OSDictionary *properties) override;
++    bool start(IOService *provider) override;
++    void stop(IOService *provider) override;
++    void free() override;
++    IOReturn clientClose() override;
++    IOReturn externalMethod(uint32_t selector, IOExternalMethodArguments *arguments,
++                           IOExternalMethodDispatch *dispatch = nullptr,
++                           OSObject *target = nullptr, void *reference = nullptr) override;
++};
++#endif
+diff --git a/AsusSMC/FXProfileBridge.inc b/AsusSMC/FXProfileBridge.inc
+new file mode 100644
+--- /dev/null
++++ b/AsusSMC/FXProfileBridge.inc
+@@ -0,0 +1,250 @@
++/* SPDX-License-Identifier: MIT
++ * Included by AsusSMC.cpp so the pinned upstream target builds this code
++ * without silently omitting an unregistered Xcode translation unit.
++ */
++#include <kern/clock.h>
++#include <kern/task.h>
++static_assert(kIOPMSystemCapabilityWillChange == 1 && kIOPMSystemCapabilityDidChange == 2,
++              "Power transition flags changed");
++static_assert(kIOPMSystemCapabilityCPU == 1 && kIOPMSystemCapabilityGraphics == 2,
++              "Power capability mask changed");
++OSDefineMetaClassAndStructors(AsusSMCProfileUserClient, IOUserClient)
++
++bool AsusSMCProfileUserClient::initWithTask(task_t task, void *securityID,
++                                          UInt32 type, OSDictionary *properties) {
++    if (type != FX_PROFILE_CONNECT_TYPE || task == TASK_NULL ||
++        !IOUserClient::initWithTask(task, securityID, type, properties)) return false;
++    providerLock_ = IOLockAlloc();
++    if (!providerLock_) return false;
++    ownerTask_ = task;
++    task_reference(ownerTask_);
++    return true;
++}
++
++bool AsusSMCProfileUserClient::start(IOService *provider) {
++    auto asus = OSDynamicCast(AsusSMC, provider);
++    if (!asus || !IOUserClient::start(provider)) return false;
++    asus->retain();
++    IOLockLock(providerLock_);
++    asus_ = asus;
++    IOLockUnlock(providerLock_);
++    return true;
++}
++
++void AsusSMCProfileUserClient::stop(IOService *provider) {
++    IOLockLock(providerLock_);
++    auto asus = asus_;
++    asus_ = nullptr;
++    IOLockUnlock(providerLock_);
++    if (asus) asus->release();
++    IOUserClient::stop(provider);
++}
++
++void AsusSMCProfileUserClient::free() {
++    if (providerLock_) { IOLockFree(providerLock_); providerLock_ = nullptr; }
++    if (ownerTask_ != TASK_NULL) { task_deallocate(ownerTask_); ownerTask_ = TASK_NULL; }
++    IOUserClient::free();
++}
++
++IOReturn AsusSMCProfileUserClient::clientClose() {
++    terminate();
++    return kIOReturnSuccess;
++}
++
++IOReturn AsusSMCProfileUserClient::externalMethod(uint32_t selector,
++        IOExternalMethodArguments *args, IOExternalMethodDispatch *, OSObject *, void *) {
++    if (!args || isInactive()) return kIOReturnNotAttached;
++    /* No async calls, descriptor-backed structures or arbitrary buffers. */
++    if (args->asyncWakePort != MACH_PORT_NULL || args->asyncReferenceCount != 0 ||
++        args->structureInputSize != 0 || args->structureInputDescriptor ||
++        args->structureOutputDescriptor || args->scalarOutputCount != 0)
++        return kIOReturnBadArgument;
++    FXGateCall call {};
++    if (selector == FXQuery) {
++        if (args->scalarInputCount != 0 || !args->structureOutput ||
++            args->structureOutputSize != sizeof(FXProfileSnapshot)) return kIOReturnBadArgument;
++        call.operation = FXGateCall::Query;
++        call.snapshot = static_cast<FXProfileSnapshot *>(args->structureOutput);
++    } else if (selector == FXSetProfile) {
++        if (args->scalarInputCount != 1 || !args->scalarInput ||
++            args->structureOutputSize != 0 || args->scalarInput[0] > FXSilent)
++            return kIOReturnBadArgument;
++        /* Recheck both owning and invoking task: passing a connection port to
++         * another task cannot confer the opener's write privilege. */
++        if (clientHasPrivilege(ownerTask_, kIOClientPrivilegeAdministrator) != kIOReturnSuccess ||
++            clientHasPrivilege(current_task(), kIOClientPrivilegeAdministrator) != kIOReturnSuccess)
++            return kIOReturnNotPrivileged;
++        call.operation = FXGateCall::Set;
++        call.profile = static_cast<uint32_t>(args->scalarInput[0]);
++    } else return kIOReturnUnsupported;
++    IOLockLock(providerLock_);
++    auto asus = asus_;
++    if (asus) asus->retain();
++    IOLockUnlock(providerLock_);
++    if (!asus) return kIOReturnNotAttached;
++    IOReturn result = asus->fxRun(call);
++    asus->release();
++    return result;
++}
++
++IOReturn AsusSMC::newUserClient(task_t owningTask, void *securityID, UInt32 type,
++                               OSDictionary *properties, IOUserClient **handler) {
++    if (!handler) return kIOReturnBadArgument;
++    *handler = nullptr;
++    if (type != FX_PROFILE_CONNECT_TYPE || isInactive()) return kIOReturnUnsupported;
++    auto client = new AsusSMCProfileUserClient;
++    if (!client) return kIOReturnNoMemory;
++    if (!client->initWithTask(owningTask, securityID, type, properties)) {
++        client->release();
++        return kIOReturnNoResources;
++    }
++    if (!client->attach(this)) { client->release(); return kIOReturnNotAttached; }
++    if (!client->start(this)) {
++        client->detach(this);
++        client->release();
++        return kIOReturnNotAttached;
++    }
++    *handler = client;
++    return kIOReturnSuccess;
++}
++
++IOReturn AsusSMC::fxRun(FXGateCall &call) {
++    /* Gate lifetime extends to free(), including after stop(). Each client
++     * retains the service around this synchronous call. Never remove the gate
++     * underneath a queued request. All state below is serialized by it. */
++    if (!command_gate) return kIOReturnNotReady;
++    return command_gate->runAction(fxGateAction, &call);
++}
++
++IOReturn AsusSMC::fxGateAction(OSObject *owner, void *arg0, void *, void *, void *) {
++    auto self = OSDynamicCast(AsusSMC, owner);
++    auto call = static_cast<FXGateCall *>(arg0);
++    if (!self || !call) return kIOReturnBadArgument;
++    if (call->operation == FXGateCall::Stop) {
++        self->fxRunning = false;
++        self->fxPolicy.stop();
++        return kIOReturnSuccess;
++    }
++    if (call->operation == FXGateCall::Initialize) {
++        auto enabled = OSDynamicCast(OSBoolean, self->getProperty("FX505GTProfileBridgeEnabled"));
++        auto model = OSDynamicCast(OSString, self->getProperty("FX505GTProfileModel"));
++        auto fn = OSDynamicCast(OSBoolean, self->getProperty("FX505GTProfileFnF5Enabled"));
++        self->fxPolicy.configure(enabled && enabled->isTrue(),
++            model && model->isEqualTo("FX505GT"), self->fxWmiVerified,
++            fn && fn->isTrue());
++        self->fxRunning = true;
++        self->fxPolicy.suspend(); // No I/O until initial full-wake capability synchronization.
++        self->fxPowerNotifier = registerPrioritySleepWakeInterest(fxPowerInterest, self);
++        if (!self->fxPowerNotifier) self->fxPolicy.powerUnavailable();
++        self->fxRefresh();
++        return kIOReturnSuccess;
++    }
++    if (!self->fxRunning || self->isInactive() || !self->atkDevice ||
++        self->atkDevice != self->getProvider()) return kIOReturnNotAttached;
++    if (call->operation == FXGateCall::Suspend) {
++        self->fxPolicy.suspend();
++        return kIOReturnSuccess;
++    }
++    if (call->operation == FXGateCall::Capabilities) {
++        self->fxPolicy.powerCapabilities(call->powerFlags, call->powerFrom, call->powerTo);
++        return kIOReturnSuccess;
++    }
++    if (call->operation == FXGateCall::Message) {
++        if (self->fxPolicy.snapshot().state == FXSuspended) return kIOReturnNotReady;
++        return self->fxMessage(call->messageType, call->messageProvider,
++                               call->messageArgument, call->arrivalNS);
++    }
++    self->fxRefresh();
++    if (call->operation == FXGateCall::Query) {
++        if (!call->snapshot) return kIOReturnBadArgument;
++        *call->snapshot = self->fxPolicy.snapshot();
++        return kIOReturnSuccess;
++    }
++    if (call->operation == FXGateCall::Set)
++        return self->fxSet(call->profile, FXCommandLine);
++    return kIOReturnUnsupported;
++}
++
++fx::Raw AsusSMC::fxEvaluate(uint32_t method, uint32_t device, uint32_t value) {
++    /* Only private callers select these two method IDs and two fixed devices.
++     * A guessed WMNB fallback is never accepted for this bridge. */
++    if (!fxWmiVerified || !atkDevice || atkDevice != getProvider() ||
++        (method != ASUS_WMI_METHODID_DSTS && method != ASUS_WMI_METHODID_DEVS) ||
++        (device != fx::ThermalDevice && device != fx::FanBoostDevice))
++        return fx::Raw::decode(false, 0, kIOReturnUnsupported);
++    wmi_args input {device, value};
++    OSObject *args[3] = {OSNumber::withNumber(0ULL, 32),
++        OSNumber::withNumber(method, 32), OSData::withBytes(&input, sizeof(input))};
++    if (!args[0] || !args[1] || !args[2]) {
++        for (unsigned i = 0; i < 3; ++i) if (args[i]) args[i]->release();
++        return fx::Raw::decode(false, 0, kIOReturnNoMemory);
++    }
++    uint32_t raw = 0;
++    IOReturn ret = atkDevice->evaluateInteger(wmi_method, &raw, args, 3);
++    for (unsigned i = 0; i < 3; ++i) args[i]->release();
++    return fx::Raw::decode(ret == kIOReturnSuccess, raw, ret);
++}
++
++void AsusSMC::fxRefresh() {
++    if (!fxPolicy.mayProbe()) return;
++    auto thermal = fxEvaluate(ASUS_WMI_METHODID_DSTS, fx::ThermalDevice, 0);
++    auto fan = fxEvaluate(ASUS_WMI_METHODID_DSTS, fx::FanBoostDevice, 0);
++    fxPolicy.probe(thermal, fan);
++}
++
++IOReturn AsusSMC::fxSet(uint32_t profile, uint32_t source) {
++    if (!fxPolicy.prepare(profile, source, fxTimestamp())) return kIOReturnUnsupported;
++    auto result = fxEvaluate(ASUS_WMI_METHODID_DEVS, fxPolicy.device(), profile);
++    return fxPolicy.complete(result, fxTimestamp()) ? kIOReturnSuccess : kIOReturnIOError;
++}
++
++void AsusSMC::fxHandleFn(uint32_t code, uint64_t arrivalNS) {
++    if (code != 0x99u && code != 0xaeu) return;
++    fxRefresh();
++    uint32_t requested = FX_PROFILE_UNKNOWN;
++    if (fxPolicy.fnEvent(code, arrivalNS, requested))
++        (void)fxSet(requested, FXFnF5);
++}
++
++uint64_t AsusSMC::fxTimestamp() {
++    uint64_t uptime = 0, nanoseconds = 0;
++    clock_get_uptime(&uptime);
++    absolutetime_to_nanoseconds(uptime, &nanoseconds);
++    return nanoseconds;
++}
++
++IOReturn AsusSMC::fxPowerInterest(void *target, void *, UInt32 type,
++                                  IOService *, void *argument, vm_size_t size) {
++    auto self = static_cast<AsusSMC *>(target);
++    if (!self) return kIOReturnBadArgument;
++    FXGateCall call {};
++    switch (type) {
++        case kIOMessageSystemWillSleep:
++            call.operation = FXGateCall::Suspend;
++            (void)self->fxRun(call); // Serialize with any in-flight request.
++            // Priority-interest callbacks receive a notification structure,
++            // not an acknowledgement cookie. Synchronous completion leaves
++            // its initialized returnValue=0: no asynchronous ack is needed.
++            return kIOReturnSuccess;
++        case kIOMessageSystemCapabilityChange: {
++            if (!argument || size < sizeof(IOPMSystemCapabilityChangeParameters)) {
++                call.operation = FXGateCall::Suspend;
++            } else {
++                auto change = static_cast<const IOPMSystemCapabilityChangeParameters *>(argument);
++                call.operation = FXGateCall::Capabilities;
++                call.powerFlags = change->changeFlags;
++                call.powerFrom = change->fromCapabilities;
++                call.powerTo = change->toCapabilities;
++            }
++            (void)self->fxRun(call);
++            return kIOReturnSuccess; // Synchronous; maxWaitForReply remains zero.
++        }
++        case kIOMessageSystemHasPoweredOn:
++        case kIOMessageSystemWillNotSleep:
++            // Capability synchronization, not this legacy message, permits I/O.
++            return kIOReturnSuccess;
++        case kIOMessageCanSystemSleep:
++            return kIOReturnSuccess;
++        default: return kIOReturnSuccess;
++    }
++}

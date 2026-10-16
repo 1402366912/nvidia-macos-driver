@@ -1,0 +1,6 @@
+Native CLI build requires macOS and the Apple SDK.
+
+exit_status=3
+host=Linux
+xcodebuild=unavailable
+xcrun=unavailable

@@ -1,0 +1,3 @@
+PASS: portable policy assertions (capabilities, errors, one backend, unknown state, Fn cycle/debounce, stop)
+PASS: shared C ABI size and offsets
+PASS: host CLI parser and explicit non-macOS failure (no device access)
