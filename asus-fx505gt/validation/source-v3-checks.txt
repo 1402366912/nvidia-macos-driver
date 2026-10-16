@@ -1,0 +1,6 @@
+PASS: nine-file overlay equals fresh pinned patch application and hashes.
+PASS: Python and shell syntax; all native plists parse; every deliverable file is UTF-8 source/text.
+PASS: Fn ABI2 + connection cohort0x46583250; app/CLI/kext share header identity.
+PASS: app and session actions reject differing real/effective UIDs.
+PASS: SSDT source remains identical to the actual zero-diagnostic ACPICA build.
+LIMIT: Apple SDK Objective-C++/kext build and native runtime tests remain unavailable/unperformed.

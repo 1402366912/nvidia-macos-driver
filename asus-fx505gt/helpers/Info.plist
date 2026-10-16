@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>org.fx505gt.fxradio</string>
+<key>CFBundleName</key><string>FX505GT Radio Companion</string>
+<key>CFBundleVersion</key><string>1</string>
+<key>NSBluetoothAlwaysUsageDescription</key><string>Read Bluetooth controller power and process your explicit FX505GT radio power requests. No pairing or device data is collected.</string>
+</dict></plist>

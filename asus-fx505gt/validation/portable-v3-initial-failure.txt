@@ -1,0 +1,2 @@
+fn_policy_test: /tmp/fx505gt-profile-bridge/deliverable/tests/fn_policy_test.cpp:20: int main(): Assertion `b.version==1 && b.size==288 && b.count==1 && b.lastObservedCode==0x7c' failed.
+Aborted

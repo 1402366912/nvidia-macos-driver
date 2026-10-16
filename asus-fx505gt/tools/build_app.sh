@@ -17,15 +17,28 @@ xcrun --sdk macosx clang++ -std=c++14 -Wall -Wextra -Werror -Wno-deprecated-decl
   "$base/cli/fxprofile.cpp" -framework IOKit -framework CoreFoundation -o "$out/fxprofile"
 helperhash=$(shasum -a 256 "$out/fxprofile" | awk '{print $1}')
 printf '#define FX_EXPECTED_HELPER_SHA256 "%s"\n' "$helperhash" >> "$out/FXBuildIdentity.h"
-printf '#define FX_EXPECTED_HELPER_IDENTITY "org.fx505gt.fxprofile abi=1 fnabi=1 source=%s\\n"\n' "$version" >> "$out/FXBuildIdentity.h"
+profileabi=$(awk '$2=="FX_PROFILE_ABI_VERSION" {gsub(/u/,"",$3); print $3}' "$base/include/FXProfileABI.h")
+fnabi=$(awk '$2=="FX_FN_ABI_VERSION" {gsub(/u/,"",$3); print $3}' "$base/include/FXFnABI.h")
+printf '#define FX_EXPECTED_HELPER_IDENTITY "org.fx505gt.fxprofile abi=%s fnabi=%s source=%s\\n"\n' "$profileabi" "$fnabi" "$version" >> "$out/FXBuildIdentity.h"
 app="$out/FX505GT Control.app"
-mkdir -p "$app/Contents/MacOS"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Helpers"
+# Unprivileged fixed-command radio companion. The embedded plist supplies its
+# native privacy purpose; neither build nor app accepts a permission prompt.
+xcrun --sdk macosx clang++ -std=c++14 -fobjc-arc -Wall -Wextra -Werror \
+  -Wno-deprecated-declarations -mmacosx-version-min=10.15 -I"$base/include" \
+  "$base/helpers/fxradio.mm" -framework Foundation -framework IOBluetooth \
+  -framework SystemConfiguration -Wl,-sectcreate,__TEXT,__info_plist,"$base/helpers/Info.plist" \
+  -o "$app/Contents/Helpers/fxradio"
+radiohash=$(shasum -a 256 "$app/Contents/Helpers/fxradio" | awk '{print $1}')
+printf '#define FX_EXPECTED_RADIO_SHA256 "%s"\n' "$radiohash" >> "$out/FXBuildIdentity.h"
 xcrun --sdk macosx clang++ -std=c++14 -fobjc-arc -Wall -Wextra -Werror \
   -Wno-deprecated-declarations -mmacosx-version-min=10.15 \
   -I"$base/include" -I"$base/app" -I"$out" \
   "$base/app/main.mm" "$base/app/FXHelperTrust.mm" "$base/app/FXSessionActions.mm" \
+  "$base/app/FXPanelPower.mm" "$base/app/FXBluetooth.mm" \
   -framework AppKit -framework IOKit -framework CoreFoundation -framework CoreAudio \
   -framework CoreWLAN -framework SystemConfiguration -o "$app/Contents/MacOS/FX505GTControl"
 cp "$base/app/Info.plist" "$app/Contents/Info.plist"
 printf 'Built source preview in %s. Nothing installed or executed.\n' "$out"
 printf 'Helper SHA-256: %s\nSource version: %s\n' "$helperhash" "$version"
+printf 'Radio companion SHA-256: %s\n' "$radiohash"

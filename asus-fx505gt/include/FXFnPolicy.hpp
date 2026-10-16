@@ -14,13 +14,13 @@ inline FnRoute fnRoute(uint32_t code) {
         case FX_FN_EVENT_BASE+3: return {0x30, 0, false, true};
         case FX_FN_EVENT_BASE+4: return {0, FXMicrophoneMute, false, true};
         case FX_FN_EVENT_BASE+5: return {0, 0, true, true};
-        case FX_FN_EVENT_BASE+6: return {0, FXDisplaySleep, false, true};
+        case FX_FN_EVENT_BASE+6: return {0, FXPanelPowerToggle, false, true};
         case FX_FN_EVENT_BASE+7: return {0x20, 0, false, true};
         case FX_FN_EVENT_BASE+8: return {0x10, 0, false, true};
         case FX_FN_EVENT_BASE+9: return {0x61, 0, false, true};
         case FX_FN_EVENT_BASE+10: return {0x6b, 0, false, true};
         case FX_FN_EVENT_BASE+11: return {0, FXSystemSleep, false, true};
-        case FX_FN_EVENT_BASE+12: return {0, FXWifiToggle, false, true};
+        case FX_FN_EVENT_BASE+12: return {0, FXRadiosToggle, false, true};
         case FX_FN_EVENT_BASE+13: return {0xc4, 0, false, true};
         case FX_FN_EVENT_BASE+14: return {0xc5, 0, false, true};
         default: return {0, 0, false, false};
@@ -37,7 +37,7 @@ public:
     void observe(uint32_t code) { batch_.lastObservedCode=code; ++batch_.observedCount; }
     void clear() { batch_.count=0; for (unsigned i=0;i<5;++i) { lastNS_[i]=0; seen_[i]=false; } }
     void push(uint32_t action, uint32_t code, uint64_t now) {
-        if (!enabled() || action<FXMicrophoneMute || action>FXWifiToggle) return;
+        if (!enabled() || action<FXMicrophoneMute || action>FXRadiosToggle) return;
         if (seen_[action] && now>=lastNS_[action] && now-lastNS_[action]<250000000ull) return;
         lastNS_[action]=now; seen_[action]=true;
         if (batch_.count==FX_FN_CAPACITY) { ++batch_.dropped; return; }

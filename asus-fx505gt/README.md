@@ -1,4 +1,4 @@
-# FX505GT macOS profiles and all documented Fn keys: source preview v2
+# FX505GT macOS profiles and all documented Fn keys: source preview v3
 
 Status: source WIP. Includes native AppKit menu-bar app source, CLI, a bounded
 AsusSMC backend, and a complete source-backed Fn matrix. Apple SDK native builds and
@@ -183,6 +183,7 @@ independent kernel review, and separately authorized hardware testing.
 - `include/`: shared stable ABI and actual portable policy used by the driver
 - `driver/`: same driver additions embedded in the patch
 - `app/`: native menu-bar app and session actions, companion-helper trust
+- `helpers/`: unprivileged fixed-operation Bluetooth companion source
 - `acpi/`: default-off exact BIOS303 source candidate and provenance guards
 - `FN_MATRIX.md`: all14 officially documented combinations and limits
 - `cli/`: IOKit client source
@@ -202,15 +203,22 @@ host. It builds the CLI companion and embeds its exact binary hash/ABI/source
 identity in the app. It does not install, execute, sign or load anything.
 The exact public BIOS303 ACPI candidate is hash/header/method guarded and
 preserves non-Darwin original methods. It is not a universal FX505GT patch.
-F6 all-display sleep and F12 Wi-Fi-only control are explicit semantic limits;
-see the full matrix rather than treating all14 as hardware-tested.
+F6 now uses a capability-gated internal-panel power parameter, while F12
+implements Wi-Fi + Bluetooth control through CoreWLAN and a bounded,
+unprivileged companion. Reports describe OS/driver state, never physical
+panel power or RF silence. Unsupported combinations remain disabled.
+See the full matrix rather than treating all14 as hardware-tested.
 
-## Requested semantics still open
+## Matching cohort and remaining validation
 
-The14-key source routing matrix does **not** mean all requested Fn behavior is
-complete. Two functional gaps remain explicit work items: F6 panel-only on/off
-rather than all-display sleep, and F12 full Wi-Fi/Bluetooth radio semantics
-rather than primary Wi-Fi plus a settings shortcut. Their next implementation
-must be source-backed and capability/readback checked; unsupported hardware
-must remain visibly unsupported. Keyboard/light/touchpad/display paths also
-still require the unified native/hardware test, not a simulated success.
+This source cohort uses profile ABI1, Fn ABI2 and connection type`0x46583250`.
+Earlier clients/kexts cannot open its userclient. Build the matching kext,
+CLI and app together; both helper binaries are hash-pinned by the app build.
+The additional radio companion is bundled and ordinary-user only, not a
+privileged service. It starts disabled and preserves native privacy prompts.
+
+The14-key source matrix now includes native implementations for the earlier
+F6/F12 functional gaps. Actual support remains conditional on the display and
+Bluetooth drivers, OS APIs, exact firmware table and compatible audio/touchpad/
+keyboard-light paths. Apple SDK compilation and the unified native/hardware
+test remain required. No successful runtime behavior is asserted by CPU tests.

@@ -5,12 +5,12 @@
 #ifndef FX_FN_ABI_H
 #define FX_FN_ABI_H
 #include <stdint.h>
-#define FX_FN_ABI_VERSION 1u
+#define FX_FN_ABI_VERSION 2u
 #define FX_FN_EVENT_BASE 0x0000f500u
 #define FX_FN_CAPACITY 16u
 enum FXFnSelector { FXClaimSession = 2, FXReadSession = 3 };
 enum FXSessionAction { FXNoAction = 0, FXMicrophoneMute = 1,
-    FXDisplaySleep = 2, FXSystemSleep = 3, FXWifiToggle = 4 };
+    FXPanelPowerToggle = 2, FXSystemSleep = 3, FXRadiosToggle = 4 };
 typedef struct FXSessionEvent {
     uint32_t action, acpiCode, uptimeLo, uptimeHi;
 } FXSessionEvent;

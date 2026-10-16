@@ -7,6 +7,7 @@ static fx::Policy ready(uint32_t thermal = 0x10000, uint32_t fan = 0) {
     fx::Policy p; p.configure(true, true, true, true); p.probe(ok(thermal), ok(fan)); return p;
 }
 int main() {
+    static_assert(FX_PROFILE_CONNECT_TYPE==0x46583250u,"Connection cohort regression");
     fx::Policy p;
     assert(p.snapshot().currentProfile == FX_PROFILE_UNKNOWN);
     assert(p.snapshot().lastAcceptedProfile == FX_PROFILE_UNKNOWN);

@@ -5,7 +5,7 @@
 #define FX_PROFILE_ABI_H
 #include <stdint.h>
 #define FX_PROFILE_ABI_VERSION 1u
-#define FX_PROFILE_CONNECT_TYPE 0x46583550u
+#define FX_PROFILE_CONNECT_TYPE 0x46583250u
 #define FX_PROFILE_UNKNOWN 0xffffffffu
 #define FX_PROFILE_SERVICE "AsusSMC"
 enum FXSelector { FXQuery = 0, FXSetProfile = 1 };

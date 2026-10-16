@@ -121,10 +121,11 @@ MIT licenses; no GPU source is altered by this standalone patch.
   consumer fails closed; no client-provided UID is trusted. This internal
   privilege check requires native compatibility validation on the target OS.
 
-The app uses public CoreAudio, CoreWLAN, IOKit, AppKit and Foundation APIs.
-The Bluetooth settings URL is a best-effort OS settings shortcut, not a public
-Bluetooth power setter; failure is reported and no state is invented.
-No old daemon private Bluetooth/BezelServices/OSD implementation was copied.
+The base app uses public CoreAudio, CoreWLAN, IOKit, AppKit and Foundation
+APIs. The v2 Bluetooth settings URL remains a best-effort shortcut. The v3
+opt-in companion below deliberately uses a verified private power API; it is
+not represented as a public Bluetooth setter. No old daemon private
+Bluetooth/BezelServices/OSD implementation was copied.
 
 - Apple Darwin ACL semantics (0 means an entry was returned, not an empty ACL):
   https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/acl_get_entry.3.html
@@ -158,3 +159,53 @@ No old daemon private Bluetooth/BezelServices/OSD implementation was copied.
   Exact commands, hashes, retained initial failure and inherited DSDT diagnostic
   comparison are recorded under `validation/ACPI_BUILD.md` and
   `validation/acpi-validation.json`. This is not a macOS or hardware test.
+
+## Internal-panel and Bluetooth implementation evidence (source preview v3)
+
+Apple IOGraphics pin `76285384ff0ce63965a21b8023bf6d7e447fcc19`:
+
+- [AppleBacklightDisplay probe and power handling](https://github.com/apple-oss-distributions/IOGraphics/blob/76285384ff0ce63965a21b8023bf6d7e447fcc19/IOGraphicsFamily/IOBacklightDisplay.cpp):
+  the class requires a built-in LCD connection; its power handling uses the
+  `dsyp` parameter when supplied by the parameter handler.
+- [Parameter dispatch](https://github.com/apple-oss-distributions/IOGraphics/blob/76285384ff0ce63965a21b8023bf6d7e447fcc19/IOGraphicsFamily/IODisplay.cpp):
+  setForKey calls the handler and updates a driver-maintained value after
+  acceptance. Reading that dictionary is not a fresh physical sensor query.
+- [Parameter constants](https://github.com/apple-oss-distributions/IOGraphics/blob/76285384ff0ce63965a21b8023bf6d7e447fcc19/IOGraphicsFamily/IOKit/graphics/IOGraphicsTypes.h):
+  `kIODisplayPowerStateKey` is `dsyp`, Off0, MinUsable1 and On2.
+
+Apple IOKitUser pin `323ead896d04424f87184d8f6ff0cce811aab106`:
+
+- [IODisplayLib.c](https://github.com/apple-oss-distributions/IOKitUser/blob/323ead896d04424f87184d8f6ff0cce811aab106/graphics.subproj/IODisplayLib.c)
+  and [IOGraphicsLib.h](https://github.com/apple-oss-distributions/IOKitUser/blob/323ead896d04424f87184d8f6ff0cce811aab106/graphics.subproj/IOGraphicsLib.h):
+  IODisplayForFramebuffer retains an already supplied IODisplay rather than
+  choosing another display; CopyParameters and SetIntegerParameter provide
+  the public read/set path. The new reader validates CF types and every field.
+- [Apple public setter reference](https://developer.apple.com/documentation/iokit/1574915-iodisplaysetintegerparameter).
+
+No Apple source implementation text is transplanted into this MIT component.
+The independent adapter writes only the fixed, advertised power parameter to
+one unique internal-panel class. The BIOS303 BLCT/SPBI flag and constant GPBL
+return are expressly not treated as hardware control or state.
+
+Bluetooth reference: **blueutil2.14.0**, MIT, pin
+`60d8411fa3f9968ab6f05e198b486fe89961e18f`:
+
+- [Power API implementation](https://github.com/toy/blueutil/blob/60d8411fa3f9968ab6f05e198b486fe89961e18f/blueutil.m#L161-L188)
+  verifies private IOBluetoothPreferencesAvailable, GetControllerPowerState
+  and void SetControllerPowerState semantics. A setter return is not an ACK.
+- [MIT license](https://github.com/toy/blueutil/blob/60d8411fa3f9968ab6f05e198b486fe89961e18f/LICENSE.txt),
+  retained as `licenses/blueutil-MIT-reference.txt` for attribution.
+- Inspected blueutil.m SHA-256:
+  `01a440077071620f50a773f57308385d3633f4a01bf9608ba8df7ba8c8cd2211`.
+- The shipped helper is independently authored fixed-operation source, not
+  the full utility or a downloaded executable. It dynamically checks those
+  symbols, enforces ordinary console ownership, validates0/1, and additionally
+  requires agreement with the public default-controller power state.
+- [Apple public controller readback](https://developer.apple.com/documentation/iobluetooth/iobluetoothhostcontroller/powerstate?language=objc)
+  is read-only and documents power-off support for Apple adapters. Third-party
+  FX505GT controllers/OS versions may therefore remain unsupported; no
+  universal private-API or physical RF-state guarantee is made.
+
+No Bluetooth permission is accepted or privacy/security setting changed by
+these source-only build/tests. The future native app must preserve OS prompts
+and report API errors/ambiguous readbacks rather than bypass them.
