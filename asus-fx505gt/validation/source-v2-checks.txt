@@ -1,0 +1,4 @@
+PASS: nine-file expanded overlay exactly equals fresh patch application and manifest.
+PASS: Python sources parse, shell scripts syntax-check, both native plists parse.
+PASS: all three kext flags false, model empty; SSDT source FXEN=Zero.
+PASS: only source UTF-8 files; Apple SDK/hardware testing explicitly pending; ACPICA SSDT compile passes -we with zero diagnostics.

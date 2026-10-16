@@ -84,7 +84,7 @@ diff --git a/AsusSMC/AsusSMC.cpp b/AsusSMC/AsusSMC.cpp
      OSSafeReleaseNULL(_notificationServices);
  
      OSSafeReleaseNULL(kbdDevice);
-@@ -138,37 +135,55 @@
+@@ -138,37 +135,58 @@
      return;
  }
  
@@ -138,8 +138,11 @@ diff --git a/AsusSMC/AsusSMC.cpp b/AsusSMC/AsusSMC.cpp
 -
 -        case kSetKeyboardBacklightMessage:
 -        {
-+            fxHandleFn(code, arrivalNS);
-+            handleMessage(code); // Existing HID/Fn mappings remain intact.
++            fxFnQueue.observe(code);
++            if (!fxRouteFn(code, arrivalNS)) {
++                fxHandleFn(code, arrivalNS);
++                handleMessage(code); // Existing HID paths remain intact.
++            }
 +            break;
 +        }
 +        case kSetKeyboardBacklightMessage: {
@@ -161,7 +164,7 @@ diff --git a/AsusSMC/AsusSMC.cpp b/AsusSMC/AsusSMC.cpp
      }
      return kIOReturnSuccess;
  }
-@@ -238,36 +253,43 @@
+@@ -238,36 +256,43 @@
  }
  
  void AsusSMC::parse_WDG() {
@@ -235,7 +238,7 @@ diff --git a/AsusSMC/AsusSMC.cpp b/AsusSMC/AsusSMC.cpp
  }
  
  void AsusSMC::initATKDevice() {
-@@ -934,3 +956,5 @@
+@@ -934,3 +959,5 @@
      // It is not safe to unload VirtualSMC plugins!
      return KERN_FAILURE;
  }
@@ -265,12 +268,19 @@ diff --git a/AsusSMC/AsusSMC.hpp b/AsusSMC/AsusSMC.hpp
      bool start(IOService *provider) override;
      void stop(IOService *provider) override;
      IOService *probe(IOService *provider, SInt32 *score) override;
-@@ -54,6 +61,22 @@
+@@ -54,6 +61,29 @@
      void displayOff();
  
  private:
 +    friend class AsusSMCProfileUserClient;
 +    fx::Policy fxPolicy;
++    fx::FnQueue fxFnQueue;
++    AsusSMCProfileUserClient *fxSessionClient {nullptr}; // Gate-owned identity, not dereferenced.
++    task_t fxSessionTask {TASK_NULL}; // Retained while claimed.
++    uint64_t fxSessionPollNS {0};
++    bool fxFullyAwake {false};
++    void fxReleaseSession();
++    bool fxRouteFn(uint32_t code, uint64_t now);
 +    bool fxWmiVerified {false};
 +    bool fxRunning {false};
 +    IONotifier *fxPowerNotifier {nullptr};
@@ -288,7 +298,7 @@ diff --git a/AsusSMC/AsusSMC.hpp b/AsusSMC/AsusSMC.hpp
      struct guid_block {
          char guid[16];
          union {
-@@ -93,7 +116,7 @@
+@@ -93,7 +123,7 @@
      static constexpr uint8_t NOTIFY_BRIGHTNESS_DOWN_MIN = 0x20;
      static constexpr uint8_t NOTIFY_BRIGHTNESS_DOWN_MAX = 0x2F;
  
@@ -300,7 +310,7 @@ diff --git a/AsusSMC/AsusSMC.hpp b/AsusSMC/AsusSMC.hpp
 diff --git a/AsusSMC/Info.plist b/AsusSMC/Info.plist
 --- a/AsusSMC/Info.plist
 +++ b/AsusSMC/Info.plist
-@@ -37,6 +37,13 @@
+@@ -37,6 +37,15 @@
  				<string>ASUS0010</string>
  				<string>ATK0100</string>
  			</array>
@@ -309,6 +319,8 @@ diff --git a/AsusSMC/Info.plist b/AsusSMC/Info.plist
 +			<false/>
 +			<key>FX505GTProfileModel</key>
 +			<string></string>
++			<key>FX505GTDedicatedFnContractEnabled</key>
++			<false/>
 +			<key>FX505GTProfileFnF5Enabled</key>
 +			<false/>
  			<key>IOProbeScore</key>
@@ -538,22 +550,27 @@ diff --git a/AsusSMC/FXProfileBridge.hpp b/AsusSMC/FXProfileBridge.hpp
 new file mode 100644
 --- /dev/null
 +++ b/AsusSMC/FXProfileBridge.hpp
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,38 @@
 +/* SPDX-License-Identifier: MIT */
 +#ifndef FX_PROFILE_BRIDGE_HPP
 +#define FX_PROFILE_BRIDGE_HPP
 +#include <IOKit/IOUserClient.h>
 +#include <IOKit/IOLocks.h>
 +#include "FXProfilePolicy.hpp"
++#include "FXFnPolicy.hpp"
 +class AsusSMC;
++class AsusSMCProfileUserClient;
 +struct FXGateCall {
-+    enum Operation { Initialize, Query, Set, Message, Suspend, Capabilities, Stop } operation;
++    enum Operation { Initialize, Query, Set, Message, Suspend, Capabilities, ClaimSession, ReadSession, ReleaseSession, Stop } operation;
 +    uint64_t arrivalNS {0};
 +    uint32_t powerFlags {0}, powerFrom {0}, powerTo {0};
 +    uint32_t profile {0}, messageType {0};
 +    IOService *messageProvider {nullptr};
 +    void *messageArgument {nullptr};
 +    FXProfileSnapshot *snapshot {nullptr};
++    FXSessionBatch *batch {nullptr};
++    AsusSMCProfileUserClient *client {nullptr};
++    task_t task {TASK_NULL};
 +};
 +class AsusSMCProfileUserClient : public IOUserClient {
 +    OSDeclareDefaultStructors(AsusSMCProfileUserClient)
@@ -576,7 +593,7 @@ diff --git a/AsusSMC/FXProfileBridge.inc b/AsusSMC/FXProfileBridge.inc
 new file mode 100644
 --- /dev/null
 +++ b/AsusSMC/FXProfileBridge.inc
-@@ -0,0 +1,250 @@
+@@ -0,0 +1,342 @@
 +/* SPDX-License-Identifier: MIT
 + * Included by AsusSMC.cpp so the pinned upstream target builds this code
 + * without silently omitting an unregistered Xcode translation unit.
@@ -615,7 +632,11 @@ new file mode 100644
 +    auto asus = asus_;
 +    asus_ = nullptr;
 +    IOLockUnlock(providerLock_);
-+    if (asus) asus->release();
++    if (asus) {
++        FXGateCall call {}; call.operation=FXGateCall::ReleaseSession; call.client=this;
++        (void)asus->fxRun(call);
++        asus->release();
++    }
 +    IOUserClient::stop(provider);
 +}
 +
@@ -655,6 +676,27 @@ new file mode 100644
 +            return kIOReturnNotPrivileged;
 +        call.operation = FXGateCall::Set;
 +        call.profile = static_cast<uint32_t>(args->scalarInput[0]);
++    } else if (selector == FXClaimSession || selector == FXReadSession) {
++        // "console" is the XNU console-user privilege string. Unsupported
++        // implementations fail closed. Never accept a user-supplied UID.
++        if (current_task() != ownerTask_) return kIOReturnNotPrivileged;
++        call.client=this; call.task=ownerTask_;
++        if (selector == FXClaimSession) {
++            if (args->scalarInputCount != 1 || !args->scalarInput ||
++                args->scalarInput[0] > 1 || args->structureOutputSize != 0)
++                return kIOReturnBadArgument;
++            call.operation=args->scalarInput[0] ? FXGateCall::ClaimSession : FXGateCall::ReleaseSession;
++        } else {
++            if (args->scalarInputCount != 0 || !args->structureOutput ||
++                args->structureOutputSize != sizeof(FXSessionBatch)) return kIOReturnBadArgument;
++            call.operation=FXGateCall::ReadSession;
++            call.batch=static_cast<FXSessionBatch *>(args->structureOutput);
++        }
++        // The owner may always relinquish its own claim after switching away.
++        // Acquiring or consuming still requires active-console privilege.
++        if (call.operation != FXGateCall::ReleaseSession &&
++            clientHasPrivilege(ownerTask_, "console") != kIOReturnSuccess)
++            return kIOReturnNotPrivileged;
 +    } else return kIOReturnUnsupported;
 +    IOLockLock(providerLock_);
 +    auto asus = asus_;
@@ -700,8 +742,14 @@ new file mode 100644
 +    auto call = static_cast<FXGateCall *>(arg0);
 +    if (!self || !call) return kIOReturnBadArgument;
 +    if (call->operation == FXGateCall::Stop) {
++        self->fxReleaseSession();
++        self->fxFullyAwake=false;
 +        self->fxRunning = false;
 +        self->fxPolicy.stop();
++        return kIOReturnSuccess;
++    }
++    if (call->operation == FXGateCall::ReleaseSession) {
++        if (self->fxSessionClient == call->client) self->fxReleaseSession();
 +        return kIOReturnSuccess;
 +    }
 +    if (call->operation == FXGateCall::Initialize) {
@@ -711,6 +759,10 @@ new file mode 100644
 +        self->fxPolicy.configure(enabled && enabled->isTrue(),
 +            model && model->isEqualTo("FX505GT"), self->fxWmiVerified,
 +            fn && fn->isTrue());
++        auto routes = OSDynamicCast(OSBoolean, self->getProperty("FX505GTDedicatedFnContractEnabled"));
++        self->fxFnQueue.configure(routes && routes->isTrue() && model &&
++            model->isEqualTo("FX505GT") && self->fxWmiVerified);
++        self->fxFullyAwake=false;
 +        self->fxRunning = true;
 +        self->fxPolicy.suspend(); // No I/O until initial full-wake capability synchronization.
 +        self->fxPowerNotifier = registerPrioritySleepWakeInterest(fxPowerInterest, self);
@@ -722,16 +774,42 @@ new file mode 100644
 +        self->atkDevice != self->getProvider()) return kIOReturnNotAttached;
 +    if (call->operation == FXGateCall::Suspend) {
 +        self->fxPolicy.suspend();
++        self->fxFullyAwake=false; self->fxReleaseSession();
 +        return kIOReturnSuccess;
 +    }
 +    if (call->operation == FXGateCall::Capabilities) {
 +        self->fxPolicy.powerCapabilities(call->powerFlags, call->powerFrom, call->powerTo);
++        self->fxFullyAwake=!(call->powerFlags & ~3u) && !(call->powerFlags & 1u) &&
++            ((call->powerFlags & 2u) || (!call->powerFlags && !call->powerFrom)) &&
++            (call->powerTo & 3u)==3u;
++        if (!self->fxFullyAwake) self->fxReleaseSession();
 +        return kIOReturnSuccess;
 +    }
 +    if (call->operation == FXGateCall::Message) {
 +        if (self->fxPolicy.snapshot().state == FXSuspended) return kIOReturnNotReady;
 +        return self->fxMessage(call->messageType, call->messageProvider,
 +                               call->messageArgument, call->arrivalNS);
++    }
++    if (call->operation == FXGateCall::ClaimSession || call->operation == FXGateCall::ReadSession) {
++        if (!self->fxFnQueue.enabled() || !self->fxFullyAwake) return kIOReturnNotReady;
++        if (!call->task || IOUserClient::clientHasPrivilege(call->task,"console") != kIOReturnSuccess) return kIOReturnNotPrivileged;
++        uint64_t now=fxTimestamp();
++        if (self->fxSessionClient && (now < self->fxSessionPollNS || now-self->fxSessionPollNS>2000000000ull ||
++            IOUserClient::clientHasPrivilege(self->fxSessionTask, "console") != kIOReturnSuccess))
++            self->fxReleaseSession();
++        if (call->operation == FXGateCall::ClaimSession) {
++            if (self->fxSessionClient && self->fxSessionClient != call->client) return kIOReturnExclusiveAccess;
++            if (!self->fxSessionClient) {
++                self->fxSessionClient=call->client; self->fxSessionTask=call->task;
++                task_reference(self->fxSessionTask);
++            }
++            self->fxFnQueue.clear(); // Explicit re-claim never replays an old batch.
++        } else {
++            if (self->fxSessionClient != call->client || !call->batch) return kIOReturnNotOpen;
++            *call->batch=self->fxFnQueue.drain(now);
++        }
++        self->fxSessionPollNS=now;
++        return kIOReturnSuccess;
 +    }
 +    self->fxRefresh();
 +    if (call->operation == FXGateCall::Query) {
@@ -827,3 +905,130 @@ new file mode 100644
 +        default: return kIOReturnSuccess;
 +    }
 +}
++
++void AsusSMC::fxReleaseSession() {
++    fxSessionClient=nullptr;
++    if (fxSessionTask != TASK_NULL) { task_deallocate(fxSessionTask); fxSessionTask=TASK_NULL; }
++    fxSessionPollNS=0; fxFnQueue.clear();
++}
++
++bool AsusSMC::fxRouteFn(uint32_t code, uint64_t now) {
++    if (!fxFnQueue.enabled()) return false;
++    // In the dedicated contract, conflicting legacy synthetic/raw meanings
++    // are deliberately suppressed, never reinterpreted as power actions.
++    if (code==0x33 || code==0x34 || code==0x35 || code==0x5e || code==0x7d) return true;
++    auto route=fx::fnRoute(code);
++    if (!route.recognized) return false;
++    if (!fxFullyAwake) return true;
++    if (route.hidCode) handleMessage(route.hidCode); // Exactly one stock HID action.
++    else if (route.fan) {
++        fxRefresh();
++        auto backend=fxPolicy.snapshot().backend;
++        if (backend==FXThermalPolicy) fxHandleFn(0xae,now);
++        else if (backend==FXFanBoost) fxHandleFn(0x99,now);
++    } else if (route.action) {
++        const uint64_t leaseNow=fxTimestamp(); // Arrival can predate a newer gated poll.
++        if (!fxSessionClient || leaseNow<fxSessionPollNS || leaseNow-fxSessionPollNS>2000000000ull ||
++            IOUserClient::clientHasPrivilege(fxSessionTask,"console") != kIOReturnSuccess) {
++            fxReleaseSession(); return true; // No consumer: no deferred replay.
++        }
++        fxFnQueue.push(route.action,code,now);
++    }
++    return true;
++}
+diff --git a/AsusSMC/FXFnABI.h b/AsusSMC/FXFnABI.h
+new file mode 100644
+--- /dev/null
++++ b/AsusSMC/FXFnABI.h
+@@ -0,0 +1,25 @@
++/* SPDX-License-Identifier: MIT
++ * Dedicated opt-in ACPI contract, NOT claimed native FX505GT event numbers.
++ * FXFnBase + 1..12 = F1..F12; +13/+14 = Up/Down.
++ */
++#ifndef FX_FN_ABI_H
++#define FX_FN_ABI_H
++#include <stdint.h>
++#define FX_FN_ABI_VERSION 1u
++#define FX_FN_EVENT_BASE 0x0000f500u
++#define FX_FN_CAPACITY 16u
++enum FXFnSelector { FXClaimSession = 2, FXReadSession = 3 };
++enum FXSessionAction { FXNoAction = 0, FXMicrophoneMute = 1,
++    FXDisplaySleep = 2, FXSystemSleep = 3, FXWifiToggle = 4 };
++typedef struct FXSessionEvent {
++    uint32_t action, acpiCode, uptimeLo, uptimeHi;
++} FXSessionEvent;
++typedef struct FXSessionBatch {
++    uint32_t version, size, enabled, count;
++    uint32_t dropped, lastObservedCode, observedCount, reserved;
++    FXSessionEvent events[FX_FN_CAPACITY];
++} FXSessionBatch;
++#ifdef __cplusplus
++static_assert(sizeof(FXSessionBatch) == 288, "Fn ABI changed");
++#endif
++#endif
+diff --git a/AsusSMC/FXFnPolicy.hpp b/AsusSMC/FXFnPolicy.hpp
+new file mode 100644
+--- /dev/null
++++ b/AsusSMC/FXFnPolicy.hpp
+@@ -0,0 +1,61 @@
++/* SPDX-License-Identifier: MIT. Pure bounded routing/queue logic, no device I/O. */
++#ifndef FX_FN_POLICY_HPP
++#define FX_FN_POLICY_HPP
++#include "FXFnABI.h"
++namespace fx {
++struct FnRoute {
++    uint32_t hidCode, action;
++    bool fan, recognized;
++};
++inline FnRoute fnRoute(uint32_t code) {
++    switch (code) {
++        case FX_FN_EVENT_BASE+1: return {0x32, 0, false, true};
++        case FX_FN_EVENT_BASE+2: return {0x31, 0, false, true};
++        case FX_FN_EVENT_BASE+3: return {0x30, 0, false, true};
++        case FX_FN_EVENT_BASE+4: return {0, FXMicrophoneMute, false, true};
++        case FX_FN_EVENT_BASE+5: return {0, 0, true, true};
++        case FX_FN_EVENT_BASE+6: return {0, FXDisplaySleep, false, true};
++        case FX_FN_EVENT_BASE+7: return {0x20, 0, false, true};
++        case FX_FN_EVENT_BASE+8: return {0x10, 0, false, true};
++        case FX_FN_EVENT_BASE+9: return {0x61, 0, false, true};
++        case FX_FN_EVENT_BASE+10: return {0x6b, 0, false, true};
++        case FX_FN_EVENT_BASE+11: return {0, FXSystemSleep, false, true};
++        case FX_FN_EVENT_BASE+12: return {0, FXWifiToggle, false, true};
++        case FX_FN_EVENT_BASE+13: return {0xc4, 0, false, true};
++        case FX_FN_EVENT_BASE+14: return {0xc5, 0, false, true};
++        default: return {0, 0, false, false};
++    }
++}
++class FnQueue {
++    FXSessionBatch batch_ {};
++    uint64_t lastNS_[5] {};
++    bool seen_[5] {};
++public:
++    FnQueue() { batch_.version=FX_FN_ABI_VERSION; batch_.size=sizeof(batch_); }
++    void configure(bool enabled) { batch_.enabled=enabled; clear(); }
++    bool enabled() const { return batch_.enabled != 0; }
++    void observe(uint32_t code) { batch_.lastObservedCode=code; ++batch_.observedCount; }
++    void clear() { batch_.count=0; for (unsigned i=0;i<5;++i) { lastNS_[i]=0; seen_[i]=false; } }
++    void push(uint32_t action, uint32_t code, uint64_t now) {
++        if (!enabled() || action<FXMicrophoneMute || action>FXWifiToggle) return;
++        if (seen_[action] && now>=lastNS_[action] && now-lastNS_[action]<250000000ull) return;
++        lastNS_[action]=now; seen_[action]=true;
++        if (batch_.count==FX_FN_CAPACITY) { ++batch_.dropped; return; }
++        batch_.events[batch_.count++]={action,code,static_cast<uint32_t>(now),static_cast<uint32_t>(now>>32)};
++    }
++    FXSessionBatch drain(uint64_t now) {
++        FXSessionBatch out=batch_; out.count=0;
++        for (uint32_t i=0;i<batch_.count;++i) {
++            auto e=batch_.events[i]; uint64_t t=(static_cast<uint64_t>(e.uptimeHi)<<32)|e.uptimeLo;
++            if (now>=t && now-t<=2000000000ull) out.events[out.count++]=e;
++            else ++batch_.dropped;
++        }
++        out.dropped=batch_.dropped;
++        // No stale memory, and never return a consumed event twice.
++        for (uint32_t i=out.count;i<FX_FN_CAPACITY;++i) out.events[i]={0,0,0,0};
++        batch_.count=0;
++        return out;
++    }
++};
++}
++#endif

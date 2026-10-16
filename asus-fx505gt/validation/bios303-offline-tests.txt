@@ -1,0 +1,1 @@
+PASS: exact public BIOS303 fixture; 14 definition-name bytes + checksum only; input retained; all mismatches rejected

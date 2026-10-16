@@ -90,3 +90,71 @@ Intended sibling destination: `1402366912/nvidia-macos-driver`, base reviewed
 as `0960b2ef5dbc4a573056d4c8e042a5bd2e15d651`. Its root license is PolyForm
 Noncommercial 1.0.0. This component and AsusSMC changes retain their separate
 MIT licenses; no GPU source is altered by this standalone patch.
+
+## Full FX505GT Fn matrix and native session app (source preview v2)
+
+- ASUS English E15207 (July 2019), FX505GT, pp36–37:
+  https://dlcdnets.asus.com/pub/ASUS/GamingNB/FX505GT/0409_E15207_FX505GT_A.pdf
+- ASUS Simplified Chinese C15207 (February 2019), pp36–37:
+  https://dlcdnets.asus.com/pub/ASUS/GamingNB/FX505GT/0804_C15207_FX505GT_B.pdf
+- Linux asus-nb-wmi event table at the existing pinned Linux commit:
+  https://github.com/torvalds/linux/blob/70dd4ee72eb2d5793c62e71c14e3aba78e5a4e56/drivers/platform/x86/asus-nb-wmi.c#L590-L693
+  `0x7c` is mic mute, but `0x35`, `0x5e`, `0x7d` do NOT universally mean
+  display-off, sleep, airplane. Legacy AsusSMC deliberately uses its own patched
+  event meanings. No GPL code is copied into the independently authored router.
+- Apple CoreAudio `kAudioDevicePropertyMute` and property access APIs:
+  https://developer.apple.com/documentation/coreaudio/kaudiodevicepropertymute
+  https://developer.apple.com/documentation/coreaudio/audioobjectispropertysettable(_:_:_:)
+- Apple IOPMSleepSystem: root or console user, return value is request status:
+  https://developer.apple.com/documentation/iokit/1557121-iopmsleepsystem
+- Apple AppleScript command reference: native administrator authorization,
+  cancellation/errors; authentication may be reused for five minutes:
+  https://developer.apple.com/library/archive/documentation/AppleScript/Conceptual/AppleScriptLangGuide/reference/ASLR_cmds.html
+- Apple CoreWLAN interface power API (primary interface only in this preview):
+  https://developer.apple.com/documentation/corewlan/cwinterface/setpower(_:)
+- Apple `pmset` source identifies the fixed `displaysleepnow` operation:
+  https://github.com/apple-oss-distributions/PowerManagement/blob/main/pmset/pmset.m
+  This is API/command evidence, not imported code or a pinned runtime binary.
+- The existing pinned XNU IOUserClient.cpp interprets the private privilege
+  string `console` against the owning task's active console UID. This is
+  checked on every claim/read and again at dispatch. If unsupported, the
+  consumer fails closed; no client-provided UID is trusted. This internal
+  privilege check requires native compatibility validation on the target OS.
+
+The app uses public CoreAudio, CoreWLAN, IOKit, AppKit and Foundation APIs.
+The Bluetooth settings URL is a best-effort OS settings shortcut, not a public
+Bluetooth power setter; failure is reported and no state is invented.
+No old daemon private Bluetooth/BezelServices/OSD implementation was copied.
+
+- Apple Darwin ACL semantics (0 means an entry was returned, not an empty ACL):
+  https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/acl_get_entry.3.html
+  https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/acl_valid.3.html
+
+- Exact public BIOS303 ACPI provenance and byte hashes are in
+  `acpi/BIOS303-provenance.json`; original attachment:
+  https://github.com/hackbnw/faustus/files/5759074/dsdt.aml.gz
+  report: https://github.com/hackbnw/faustus/issues/56 .
+  No original firmware dump or third-party AML method bodies are redistributed.
+
+- Keyboard-light protocol facts: stock KeyImplementations produces a12-bit
+  value, AsusSMC divides by16 before SKBV, and the TUF adapter divides by16
+  again then ORs0x80. The BIOS303 dump resolves SLKI at the root namespace:
+  https://github.com/hieplpvip/AsusSMC/blob/c15d2f297c86b65a3cb866cc2bcece595c136417/AsusSMC/KeyImplementations.cpp
+  https://github.com/hieplpvip/AsusSMC/blob/c15d2f297c86b65a3cb866cc2bcece595c136417/patches/kbl_tuf.txt
+  New adapter is independently written MIT, retains explicit0..255 bounds;
+  this does not establish16 physically measured keyboard brightness levels.
+
+## Offline ACPI compiler evidence
+
+- Official Debian ACPICA package `acpica-tools_20250404-1_amd64.deb`:
+  https://deb.debian.org/debian/pool/main/a/acpica-unix/acpica-tools_20250404-1_amd64.deb
+  Official checksum page:
+  https://packages.debian.org/trixie/amd64/acpica-tools/download
+- Package SHA-256:
+  `eea598bdb5d10ae51801f7c586a51f33335c60d964f5f18203cdda47fd5ab069`.
+  The compiler was extracted locally for source validation only. No compiler,
+  package, firmware dump or AML binary is included in this component.
+- The corrected new SSDT compiles with warnings-as-errors and zero diagnostics.
+  Exact commands, hashes, retained initial failure and inherited DSDT diagnostic
+  comparison are recorded under `validation/ACPI_BUILD.md` and
+  `validation/acpi-validation.json`. This is not a macOS or hardware test.

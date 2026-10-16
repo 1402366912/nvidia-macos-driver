@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: MIT
 #include "FXProfileABI.h"
+#include "FXFnABI.h"
+#ifndef FX_SOURCE_VERSION
+#define FX_SOURCE_VERSION "unversioned"
+#endif
 #include <cstdio>
 #include <cstring>
 #ifdef __APPLE__
@@ -51,6 +55,11 @@ static void usage() {
         "The bridge must be explicitly enabled for a declared FX505GT in the kext personality.");
 }
 int main(int argc, char **argv) {
+    if (argc == 2 && !std::strcmp(argv[1], "--identity")) {
+        std::printf("org.fx505gt.fxprofile abi=%u fnabi=%u source=%s\n",
+            FX_PROFILE_ABI_VERSION, FX_FN_ABI_VERSION, FX_SOURCE_VERSION);
+        return 0;
+    }
     if (argc == 2 && (!std::strcmp(argv[1], "--help") || !std::strcmp(argv[1], "-h"))) {
         usage(); return 0;
     }

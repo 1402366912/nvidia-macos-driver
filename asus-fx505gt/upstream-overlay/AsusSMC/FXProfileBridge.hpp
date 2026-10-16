@@ -4,15 +4,20 @@
 #include <IOKit/IOUserClient.h>
 #include <IOKit/IOLocks.h>
 #include "FXProfilePolicy.hpp"
+#include "FXFnPolicy.hpp"
 class AsusSMC;
+class AsusSMCProfileUserClient;
 struct FXGateCall {
-    enum Operation { Initialize, Query, Set, Message, Suspend, Capabilities, Stop } operation;
+    enum Operation { Initialize, Query, Set, Message, Suspend, Capabilities, ClaimSession, ReadSession, ReleaseSession, Stop } operation;
     uint64_t arrivalNS {0};
     uint32_t powerFlags {0}, powerFrom {0}, powerTo {0};
     uint32_t profile {0}, messageType {0};
     IOService *messageProvider {nullptr};
     void *messageArgument {nullptr};
     FXProfileSnapshot *snapshot {nullptr};
+    FXSessionBatch *batch {nullptr};
+    AsusSMCProfileUserClient *client {nullptr};
+    task_t task {TASK_NULL};
 };
 class AsusSMCProfileUserClient : public IOUserClient {
     OSDeclareDefaultStructors(AsusSMCProfileUserClient)

@@ -42,6 +42,8 @@
 			<false/>
 			<key>FX505GTProfileModel</key>
 			<string></string>
+			<key>FX505GTDedicatedFnContractEnabled</key>
+			<false/>
 			<key>FX505GTProfileFnF5Enabled</key>
 			<false/>
 			<key>IOProbeScore</key>

@@ -169,8 +169,11 @@ IOReturn AsusSMC::fxMessage(uint32_t type, IOService *provider, void *argument, 
                 arg->release();
                 if (ret != kIOReturnSuccess) return ret;
             }
-            fxHandleFn(code, arrivalNS);
-            handleMessage(code); // Existing HID/Fn mappings remain intact.
+            fxFnQueue.observe(code);
+            if (!fxRouteFn(code, arrivalNS)) {
+                fxHandleFn(code, arrivalNS);
+                handleMessage(code); // Existing HID paths remain intact.
+            }
             break;
         }
         case kSetKeyboardBacklightMessage: {

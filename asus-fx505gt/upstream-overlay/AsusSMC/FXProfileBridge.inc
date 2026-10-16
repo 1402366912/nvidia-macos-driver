@@ -36,7 +36,11 @@ void AsusSMCProfileUserClient::stop(IOService *provider) {
     auto asus = asus_;
     asus_ = nullptr;
     IOLockUnlock(providerLock_);
-    if (asus) asus->release();
+    if (asus) {
+        FXGateCall call {}; call.operation=FXGateCall::ReleaseSession; call.client=this;
+        (void)asus->fxRun(call);
+        asus->release();
+    }
     IOUserClient::stop(provider);
 }
 
@@ -76,6 +80,27 @@ IOReturn AsusSMCProfileUserClient::externalMethod(uint32_t selector,
             return kIOReturnNotPrivileged;
         call.operation = FXGateCall::Set;
         call.profile = static_cast<uint32_t>(args->scalarInput[0]);
+    } else if (selector == FXClaimSession || selector == FXReadSession) {
+        // "console" is the XNU console-user privilege string. Unsupported
+        // implementations fail closed. Never accept a user-supplied UID.
+        if (current_task() != ownerTask_) return kIOReturnNotPrivileged;
+        call.client=this; call.task=ownerTask_;
+        if (selector == FXClaimSession) {
+            if (args->scalarInputCount != 1 || !args->scalarInput ||
+                args->scalarInput[0] > 1 || args->structureOutputSize != 0)
+                return kIOReturnBadArgument;
+            call.operation=args->scalarInput[0] ? FXGateCall::ClaimSession : FXGateCall::ReleaseSession;
+        } else {
+            if (args->scalarInputCount != 0 || !args->structureOutput ||
+                args->structureOutputSize != sizeof(FXSessionBatch)) return kIOReturnBadArgument;
+            call.operation=FXGateCall::ReadSession;
+            call.batch=static_cast<FXSessionBatch *>(args->structureOutput);
+        }
+        // The owner may always relinquish its own claim after switching away.
+        // Acquiring or consuming still requires active-console privilege.
+        if (call.operation != FXGateCall::ReleaseSession &&
+            clientHasPrivilege(ownerTask_, "console") != kIOReturnSuccess)
+            return kIOReturnNotPrivileged;
     } else return kIOReturnUnsupported;
     IOLockLock(providerLock_);
     auto asus = asus_;
@@ -121,8 +146,14 @@ IOReturn AsusSMC::fxGateAction(OSObject *owner, void *arg0, void *, void *, void
     auto call = static_cast<FXGateCall *>(arg0);
     if (!self || !call) return kIOReturnBadArgument;
     if (call->operation == FXGateCall::Stop) {
+        self->fxReleaseSession();
+        self->fxFullyAwake=false;
         self->fxRunning = false;
         self->fxPolicy.stop();
+        return kIOReturnSuccess;
+    }
+    if (call->operation == FXGateCall::ReleaseSession) {
+        if (self->fxSessionClient == call->client) self->fxReleaseSession();
         return kIOReturnSuccess;
     }
     if (call->operation == FXGateCall::Initialize) {
@@ -132,6 +163,10 @@ IOReturn AsusSMC::fxGateAction(OSObject *owner, void *arg0, void *, void *, void
         self->fxPolicy.configure(enabled && enabled->isTrue(),
             model && model->isEqualTo("FX505GT"), self->fxWmiVerified,
             fn && fn->isTrue());
+        auto routes = OSDynamicCast(OSBoolean, self->getProperty("FX505GTDedicatedFnContractEnabled"));
+        self->fxFnQueue.configure(routes && routes->isTrue() && model &&
+            model->isEqualTo("FX505GT") && self->fxWmiVerified);
+        self->fxFullyAwake=false;
         self->fxRunning = true;
         self->fxPolicy.suspend(); // No I/O until initial full-wake capability synchronization.
         self->fxPowerNotifier = registerPrioritySleepWakeInterest(fxPowerInterest, self);
@@ -143,16 +178,42 @@ IOReturn AsusSMC::fxGateAction(OSObject *owner, void *arg0, void *, void *, void
         self->atkDevice != self->getProvider()) return kIOReturnNotAttached;
     if (call->operation == FXGateCall::Suspend) {
         self->fxPolicy.suspend();
+        self->fxFullyAwake=false; self->fxReleaseSession();
         return kIOReturnSuccess;
     }
     if (call->operation == FXGateCall::Capabilities) {
         self->fxPolicy.powerCapabilities(call->powerFlags, call->powerFrom, call->powerTo);
+        self->fxFullyAwake=!(call->powerFlags & ~3u) && !(call->powerFlags & 1u) &&
+            ((call->powerFlags & 2u) || (!call->powerFlags && !call->powerFrom)) &&
+            (call->powerTo & 3u)==3u;
+        if (!self->fxFullyAwake) self->fxReleaseSession();
         return kIOReturnSuccess;
     }
     if (call->operation == FXGateCall::Message) {
         if (self->fxPolicy.snapshot().state == FXSuspended) return kIOReturnNotReady;
         return self->fxMessage(call->messageType, call->messageProvider,
                                call->messageArgument, call->arrivalNS);
+    }
+    if (call->operation == FXGateCall::ClaimSession || call->operation == FXGateCall::ReadSession) {
+        if (!self->fxFnQueue.enabled() || !self->fxFullyAwake) return kIOReturnNotReady;
+        if (!call->task || IOUserClient::clientHasPrivilege(call->task,"console") != kIOReturnSuccess) return kIOReturnNotPrivileged;
+        uint64_t now=fxTimestamp();
+        if (self->fxSessionClient && (now < self->fxSessionPollNS || now-self->fxSessionPollNS>2000000000ull ||
+            IOUserClient::clientHasPrivilege(self->fxSessionTask, "console") != kIOReturnSuccess))
+            self->fxReleaseSession();
+        if (call->operation == FXGateCall::ClaimSession) {
+            if (self->fxSessionClient && self->fxSessionClient != call->client) return kIOReturnExclusiveAccess;
+            if (!self->fxSessionClient) {
+                self->fxSessionClient=call->client; self->fxSessionTask=call->task;
+                task_reference(self->fxSessionTask);
+            }
+            self->fxFnQueue.clear(); // Explicit re-claim never replays an old batch.
+        } else {
+            if (self->fxSessionClient != call->client || !call->batch) return kIOReturnNotOpen;
+            *call->batch=self->fxFnQueue.drain(now);
+        }
+        self->fxSessionPollNS=now;
+        return kIOReturnSuccess;
     }
     self->fxRefresh();
     if (call->operation == FXGateCall::Query) {
@@ -247,4 +308,35 @@ IOReturn AsusSMC::fxPowerInterest(void *target, void *, UInt32 type,
             return kIOReturnSuccess;
         default: return kIOReturnSuccess;
     }
+}
+
+void AsusSMC::fxReleaseSession() {
+    fxSessionClient=nullptr;
+    if (fxSessionTask != TASK_NULL) { task_deallocate(fxSessionTask); fxSessionTask=TASK_NULL; }
+    fxSessionPollNS=0; fxFnQueue.clear();
+}
+
+bool AsusSMC::fxRouteFn(uint32_t code, uint64_t now) {
+    if (!fxFnQueue.enabled()) return false;
+    // In the dedicated contract, conflicting legacy synthetic/raw meanings
+    // are deliberately suppressed, never reinterpreted as power actions.
+    if (code==0x33 || code==0x34 || code==0x35 || code==0x5e || code==0x7d) return true;
+    auto route=fx::fnRoute(code);
+    if (!route.recognized) return false;
+    if (!fxFullyAwake) return true;
+    if (route.hidCode) handleMessage(route.hidCode); // Exactly one stock HID action.
+    else if (route.fan) {
+        fxRefresh();
+        auto backend=fxPolicy.snapshot().backend;
+        if (backend==FXThermalPolicy) fxHandleFn(0xae,now);
+        else if (backend==FXFanBoost) fxHandleFn(0x99,now);
+    } else if (route.action) {
+        const uint64_t leaseNow=fxTimestamp(); // Arrival can predate a newer gated poll.
+        if (!fxSessionClient || leaseNow<fxSessionPollNS || leaseNow-fxSessionPollNS>2000000000ull ||
+            IOUserClient::clientHasPrivilege(fxSessionTask,"console") != kIOReturnSuccess) {
+            fxReleaseSession(); return true; // No consumer: no deferred replay.
+        }
+        fxFnQueue.push(route.action,code,now);
+    }
+    return true;
 }

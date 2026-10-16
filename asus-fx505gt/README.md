@@ -1,6 +1,9 @@
-# FX505GT firmware profiles for macOS: source preview v1
+# FX505GT macOS profiles and all documented Fn keys: source preview v2
 
-Status: source WIP. There is a CLI source implementation and no GUI yet.
+Status: source WIP. Includes native AppKit menu-bar app source, CLI, a bounded
+AsusSMC backend, and a complete source-backed Fn matrix. Apple SDK native builds and
+hardware validation remain pending; the SSDT has passed an offline ACPICA build. See [FN_MATRIX.md](FN_MATRIX.md),
+[app/README.md](app/README.md) and [acpi/README.md](acpi/README.md).
 
 This is an isolated sibling of the NVIDIA GPU work. It adds a real, bounded
 IOKit control path to pinned **AsusSMC**, plus a matching command-line client.
@@ -50,11 +53,14 @@ live or dual-fan RPM monitoring.
 
 ## Fail-closed configuration
 
-All new profile operations are off by default. In a **separately reviewed test
+All new profile and dedicated Fn-contract operations are off by default. In a **separately reviewed test
 build**, the `AsusSMC` personality in upstream `AsusSMC/Info.plist` must contain:
 
 - `FX505GTProfileBridgeEnabled`: boolean true
 - `FX505GTProfileModel`: string exactly `FX505GT`
+- `FX505GTDedicatedFnContractEnabled`: boolean true only with the separately
+  reviewed exact BIOS-specific ACPI candidate; its app session listener is
+  also off until selected each launch
 - `FX505GTProfileFnF5Enabled`: boolean true only if Fn-triggered writes are also
   intended; leave false for explicit CLI requests only
 
@@ -81,8 +87,11 @@ probe-only driver.
 
 ## Security and lifecycle
 
-There are exactly two synchronous selectors (`FXQuery`, `FXSetProfile`) with
-fixed sizes. Query is read-only and may be opened by an ordinary process.
+There are four synchronous fixed-size selectors: profile query/set and
+exclusive console session claim/read. Session reads expose a bounded queue of
+only dedicated kernel-decoded Fn actions, with no arbitrary injection or
+firmware write selector. Claim/read require active console ownership; one
+client has a two-second lease, released on close/sleep/session loss. Query is read-only and may be opened by an ordinary process.
 Writes check the owning and invoking task's root privilege in the kernel on
 every request. No caller-provided UID or app-only check grants privilege.
 
@@ -143,12 +152,12 @@ make hot-unload/reload safe. Do not infer unload support from the defensive
 client stop/free paths.
 
 No automatic installation instructions, system security relaxation, persistent
-agent, LaunchDaemon, default profile write, sleep/wake restoration, or GUI is
+agent, LaunchDaemon, default profile write, or sleep/wake restoration is
 included. Those are outside this source integration milestone.
 
 ## Validation
 
-Run `./tests/run.sh` on a CPU-only host. It compiles the production policy
+Run `sh tests/run.sh` on a CPU-only host. It compiles the production policy
 header with strict C++14 warnings and tests capability/error handling, backend
 selection, unsupported modes, unknown versus acknowledged state, Fn cycling,
 backend-matched duplicate suppression, sleep/wake invalidation, power-notifier
@@ -156,7 +165,9 @@ unavailability and shutdown. A C compilation also checks the shared ABI size
 and offsets. On Linux it also tests the actual CLI's
 argument parser and explicit refusal to fake a macOS device connection.
 
-`validation/portable-tests.txt` records the final result. The initial strict
+`validation/portable-v2-tests.txt` records the expanded current suite;
+`validation/bios303-offline-tests.txt` records the exact public fixture test.
+`validation/portable-tests.txt` retains the first source milestone result. The initial strict
 compiler warning and its fix are retained separately. Portable tests do **not**
 compile or validate the IOKit adapter, privileges, driver attachment, command
 gate lifecycle, Xcode target, macOS ABI, ACPI methods, physical fan response,
@@ -165,12 +176,15 @@ independent kernel review, and separately authorized hardware testing.
 
 ## Layout and licensing
 
-- `upstream-overlay/`: all seven modified/new AsusSMC files expanded as readable
+- `upstream-overlay/`: all nine modified/new AsusSMC files expanded as readable
   source, plus the unchanged upstream MIT license; this is not a full upstream
   checkout and still needs its unchanged dependencies
 - `patches/AsusSMC-FX505GT.patch`: complete patch against the fixed upstream
 - `include/`: shared stable ABI and actual portable policy used by the driver
 - `driver/`: same driver additions embedded in the patch
+- `app/`: native menu-bar app and session actions, companion-helper trust
+- `acpi/`: default-off exact BIOS303 source candidate and provenance guards
+- `FN_MATRIX.md`: all14 officially documented combinations and limits
 - `cli/`: IOKit client source
 - `tests/`: CPU-only policy/CLI checks
 - `tools/`: pinned apply and build-only tools
@@ -180,3 +194,23 @@ New code is independently authored under MIT; original AsusSMC copyright and
 MIT notice are preserved. Faustus/Linux are cited for protocol facts, not
 copied into the NVIDIA codebase; G-Helper code is not included. This directory
 has its own license and does not relicense the surrounding GPU project.
+
+## Native menu app and complete Fn source route
+
+Run `sh tools/build_app.sh /new/output/path` only on a prepared macOS build
+host. It builds the CLI companion and embeds its exact binary hash/ABI/source
+identity in the app. It does not install, execute, sign or load anything.
+The exact public BIOS303 ACPI candidate is hash/header/method guarded and
+preserves non-Darwin original methods. It is not a universal FX505GT patch.
+F6 all-display sleep and F12 Wi-Fi-only control are explicit semantic limits;
+see the full matrix rather than treating all14 as hardware-tested.
+
+## Requested semantics still open
+
+The14-key source routing matrix does **not** mean all requested Fn behavior is
+complete. Two functional gaps remain explicit work items: F6 panel-only on/off
+rather than all-display sleep, and F12 full Wi-Fi/Bluetooth radio semantics
+rather than primary Wi-Fi plus a settings shortcut. Their next implementation
+must be source-backed and capability/readback checked; unsupported hardware
+must remain visibly unsupported. Keyboard/light/touchpad/display paths also
+still require the unified native/hardware test, not a simulated success.

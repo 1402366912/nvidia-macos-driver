@@ -1,0 +1,166 @@
+{
+  "date": "2026-10-16",
+  "scope": "CPU-only source compile/disassemble; no ACPI method execution, no installation, no device access",
+  "package": {
+    "url": "https://deb.debian.org/debian/pool/main/a/acpica-unix/acpica-tools_20250404-1_amd64.deb",
+    "official_checksum_page": "https://packages.debian.org/trixie/amd64/acpica-tools/download",
+    "size": 865580,
+    "sha256": "eea598bdb5d10ae51801f7c586a51f33335c60d964f5f18203cdda47fd5ab069",
+    "extraction": "dpkg-deb -x PACKAGE LOCAL_TOOLCHAIN (not installed)"
+  },
+  "compiler": {
+    "version": "20250404",
+    "sha256": "bbc9710408dfd0551549d2d1528e4d9514a8782ae5b5117fc7b3d5488ce42f07"
+  },
+  "source": {
+    "path": "/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl",
+    "sha256": "d82a781ab5432589474627f5661aa788c16bedaea4319407829e7018a9969f20"
+  },
+  "original_dsdt_sha256": "f1b78256c05a9dc8d31b33631d2d91c4a3490335f4a5025a9ca1f495043b3eda",
+  "renamed_dsdt_sha256": "b4ad65b115b6c4d5683a6ff4f23d12771fb0d4910fdb49272b4db5f029df2539",
+  "compiled_ssdt": {
+    "size": 1289,
+    "sha256": "f5caf935e42b0dcb494b833a4ec3f5907be5abd21d7f6b289dd2e60a20f66086",
+    "result": "0 errors, 0 warnings, 0 remarks; -we enabled"
+  },
+  "ssdt_roundtrip": {
+    "sha256": "714eb914ed264e9826f06cbe098c4534f2180a65ed237feb3af9c9427f76f655",
+    "result": "0 errors, 0 warnings, 0 remarks; parsed together with exact renamed DSDT; not claimed byte-identical"
+  },
+  "dsdt_recompile": {
+    "normalization": "Collapse whitespace/remove diagnostic caret position; normalize renamed XQ method labels back to _Q",
+    "original": {
+      "errors": 10,
+      "warnings": 221,
+      "remarks": 637
+    },
+    "renamed": {
+      "errors": 10,
+      "warnings": 221,
+      "remarks": 637
+    },
+    "diagnostics_equal": true,
+    "added": {},
+    "removed": {},
+    "inherited_errors": {
+      "Error 6022 - Case value already specified": 10
+    }
+  },
+  "steps": [
+    {
+      "name": "initial_ssdt_compile",
+      "command": [
+        "/tmp/fx505gt-fn-review/acpica-validation/toolchain/usr/bin/iasl",
+        "-p",
+        "/tmp/fx505gt-fn-review/acpica-validation/SSDT-FX505GT-Fn-BIOS303",
+        "-tc",
+        "/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl"
+      ],
+      "log": "/tmp/fx505gt-fn-review/acpica-validation/ssdt-compile.log",
+      "log_sha256": "3d9edaa4aef841f37c4b86ec9eb3e41302e92ba8e95991785c0b6e1ae4353f11",
+      "exit": 255
+    },
+    {
+      "name": "corrected_ssdt_compile",
+      "command": [
+        "/tmp/fx505gt-fn-review/acpica-validation/toolchain/usr/bin/iasl",
+        "-we",
+        "-p",
+        "/tmp/fx505gt-fn-review/acpica-validation/SSDT-FX505GT-Fn-BIOS303-corrected",
+        "/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl"
+      ],
+      "log": "/tmp/fx505gt-fn-review/acpica-validation/ssdt-corrected-compile.log",
+      "log_sha256": "d2b79166782e7b4b7eceafb560e59adf578d2a7b350c7eae96ebc92859d55f3e",
+      "exit": 0
+    },
+    {
+      "name": "original_disassemble",
+      "command": [
+        "/tmp/fx505gt-fn-review/acpica-validation/toolchain/usr/bin/iasl",
+        "-p",
+        "/tmp/fx505gt-fn-review/acpica-validation/original",
+        "-d",
+        "/tmp/fx505gt-fn-review/fx505gt303-dsdt.aml"
+      ],
+      "log": "/tmp/fx505gt-fn-review/acpica-validation/original-disassemble.log",
+      "log_sha256": "a5e3bbc41db54b2d7f67f295301d672f4b08830514b3e9398696318785a69610",
+      "exit": 0
+    },
+    {
+      "name": "renamed_disassemble",
+      "command": [
+        "/tmp/fx505gt-fn-review/acpica-validation/toolchain/usr/bin/iasl",
+        "-e",
+        "/tmp/fx505gt-fn-review/acpica-validation/ssdt-external-fix.aml",
+        "-p",
+        "/tmp/fx505gt-fn-review/acpica-validation/renamed",
+        "-d",
+        "/tmp/fx505gt-profile-bridge/bios303-renamed-fixture.aml"
+      ],
+      "log": "/tmp/fx505gt-fn-review/acpica-validation/renamed-disassemble.log",
+      "log_sha256": "87bb6137f1bf7ad49c3b9a654bdb1c37366dd4aed4522d9715979c80478a1e44",
+      "exit": 0
+    },
+    {
+      "name": "original_recompile",
+      "command": [
+        "/tmp/fx505gt-fn-review/acpica-validation/toolchain/usr/bin/iasl",
+        "-p",
+        "/tmp/fx505gt-fn-review/acpica-validation/original-recompiled",
+        "-tc",
+        "/tmp/fx505gt-fn-review/acpica-validation/original.dsl"
+      ],
+      "log": "/tmp/fx505gt-fn-review/acpica-validation/original-recompile.log",
+      "log_sha256": "2457648f029e2d8fc1d58755138d1ee2b305d77799975260e9b7c746e3b3243e",
+      "exit": 255
+    },
+    {
+      "name": "renamed_recompile",
+      "command": [
+        "/tmp/fx505gt-fn-review/acpica-validation/toolchain/usr/bin/iasl",
+        "-p",
+        "/tmp/fx505gt-fn-review/acpica-validation/renamed-recompiled",
+        "-tc",
+        "/tmp/fx505gt-fn-review/acpica-validation/renamed.dsl"
+      ],
+      "log": "/tmp/fx505gt-fn-review/acpica-validation/renamed-recompile.log",
+      "log_sha256": "840d76f46e4ff6ce90b24ab8df6962f1568ac410ea711919ee617cda69379851",
+      "exit": 255
+    },
+    {
+      "name": "ssdt_with_dsdt_disassemble",
+      "command": [
+        "/tmp/fx505gt-fn-review/acpica-validation/toolchain/usr/bin/iasl",
+        "-e",
+        "/tmp/fx505gt-profile-bridge/bios303-renamed-fixture.aml",
+        "-p",
+        "/tmp/fx505gt-fn-review/acpica-validation/ssdt-with-dsdt",
+        "-d",
+        "/tmp/fx505gt-fn-review/acpica-validation/SSDT-FX505GT-Fn-BIOS303-corrected.aml"
+      ],
+      "log": "/tmp/fx505gt-fn-review/acpica-validation/ssdt-with-dsdt-disassemble.log",
+      "log_sha256": "dfd9c68b1efbc5749bd4cf5f965bf9dafcf1c98d83d68784a522d53e9798a1ba",
+      "exit": 0
+    },
+    {
+      "name": "ssdt_roundtrip_compile",
+      "command": [
+        "/tmp/fx505gt-fn-review/acpica-validation/toolchain/usr/bin/iasl",
+        "-we",
+        "-p",
+        "/tmp/fx505gt-fn-review/acpica-validation/ssdt-roundtrip",
+        "/tmp/fx505gt-fn-review/acpica-validation/ssdt-with-dsdt.dsl"
+      ],
+      "log": "/tmp/fx505gt-fn-review/acpica-validation/ssdt-roundtrip-compile.log",
+      "log_sha256": "656fee835c97aa39af5b986be3d2271737f5d7076a4dce4fcd2dfa2879b6ade7",
+      "exit": 0
+    }
+  ],
+  "limitations": [
+    "No native Apple SDK build",
+    "No hardware test",
+    "Full DSDT recompile fails identically before and after rename; no errors suppressed and no firmware source broadly edited",
+    "Compiled AML is retained as local validation output only, not installed/applied",
+    "Initial failed source compile log preserved; corrected source replaces the invalid External numeric argument syntax"
+  ]
+}

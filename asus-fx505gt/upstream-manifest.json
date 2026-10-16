@@ -10,26 +10,32 @@
     "AsusSMC/FXProfileABI.h",
     "AsusSMC/FXProfilePolicy.hpp",
     "AsusSMC/FXProfileBridge.hpp",
-    "AsusSMC/FXProfileBridge.inc"
+    "AsusSMC/FXProfileBridge.inc",
+    "AsusSMC/FXFnABI.h",
+    "AsusSMC/FXFnPolicy.hpp"
   ],
   "sha256_after": {
-    "AsusSMC/AsusSMC.cpp": "146b0c36cacba34f86d23441b237bf99dfc0cb535d339e28a27789583705639c",
-    "AsusSMC/AsusSMC.hpp": "3b9ded374858eaaaf4b21f994cc1a280bfd2d66229ca64b7655345297bd923f0",
-    "AsusSMC/Info.plist": "750eddd4a93ec86b3be9a5296282dd5af5a7f7114a242e0cc244d167a73b2731",
+    "AsusSMC/AsusSMC.cpp": "e5a148ef1fe54affa4c2e94aa110d3178359a2479969af7f9f087b5ed2c94695",
+    "AsusSMC/AsusSMC.hpp": "a90d63b2ca1094837e9ee1ca26f4bf5f8dc0edc88097be3faa895d7a7824ff86",
+    "AsusSMC/Info.plist": "2fb550e71af9e400e124189232fff47a2db99a8d00334e5fdef34904991520cb",
     "AsusSMC/FXProfileABI.h": "de0c32d98a34e152f47a1417bc2432ba39073a6b073f50c8a7146e793bf3eb91",
     "AsusSMC/FXProfilePolicy.hpp": "fd7630e66201748b3a94d653cf904ea84412e3fb7de88074dd709131b583a69f",
-    "AsusSMC/FXProfileBridge.hpp": "d4efb629c0868951787e81b5c097a053cbc375719e69407a77b8dc6b5d32aa2e",
-    "AsusSMC/FXProfileBridge.inc": "ae98d88e5002889c797a695ffd4342b8c36d5136b51bf8bd67d9ff89e7758ddb"
+    "AsusSMC/FXProfileBridge.hpp": "17d5f2f69efb1c6198ec0ff7d9f3817c6d868bd385bc54ed235e6943f2ae1267",
+    "AsusSMC/FXProfileBridge.inc": "d9d7eeb19c34995146fe505a2c47a19e0c6e4918f2ed250e11290d30bbe7e127",
+    "AsusSMC/FXFnABI.h": "6ff9063635cb76ee032358c0fbb2bca799a55fb061caedad8af68854e99f4e17",
+    "AsusSMC/FXFnPolicy.hpp": "f469c446d18938180a636f033b5a2ad3e863f5968faa0f6624071bf63db8fe92"
   },
   "expanded_overlay_directory": "upstream-overlay",
   "expanded_overlay_sha256": {
-    "upstream-overlay/AsusSMC/AsusSMC.cpp": "146b0c36cacba34f86d23441b237bf99dfc0cb535d339e28a27789583705639c",
-    "upstream-overlay/AsusSMC/AsusSMC.hpp": "3b9ded374858eaaaf4b21f994cc1a280bfd2d66229ca64b7655345297bd923f0",
-    "upstream-overlay/AsusSMC/Info.plist": "750eddd4a93ec86b3be9a5296282dd5af5a7f7114a242e0cc244d167a73b2731",
+    "upstream-overlay/AsusSMC/AsusSMC.cpp": "e5a148ef1fe54affa4c2e94aa110d3178359a2479969af7f9f087b5ed2c94695",
+    "upstream-overlay/AsusSMC/AsusSMC.hpp": "a90d63b2ca1094837e9ee1ca26f4bf5f8dc0edc88097be3faa895d7a7824ff86",
+    "upstream-overlay/AsusSMC/Info.plist": "2fb550e71af9e400e124189232fff47a2db99a8d00334e5fdef34904991520cb",
     "upstream-overlay/AsusSMC/FXProfileABI.h": "de0c32d98a34e152f47a1417bc2432ba39073a6b073f50c8a7146e793bf3eb91",
     "upstream-overlay/AsusSMC/FXProfilePolicy.hpp": "fd7630e66201748b3a94d653cf904ea84412e3fb7de88074dd709131b583a69f",
-    "upstream-overlay/AsusSMC/FXProfileBridge.hpp": "d4efb629c0868951787e81b5c097a053cbc375719e69407a77b8dc6b5d32aa2e",
-    "upstream-overlay/AsusSMC/FXProfileBridge.inc": "ae98d88e5002889c797a695ffd4342b8c36d5136b51bf8bd67d9ff89e7758ddb",
+    "upstream-overlay/AsusSMC/FXProfileBridge.hpp": "17d5f2f69efb1c6198ec0ff7d9f3817c6d868bd385bc54ed235e6943f2ae1267",
+    "upstream-overlay/AsusSMC/FXProfileBridge.inc": "d9d7eeb19c34995146fe505a2c47a19e0c6e4918f2ed250e11290d30bbe7e127",
+    "upstream-overlay/AsusSMC/FXFnABI.h": "6ff9063635cb76ee032358c0fbb2bca799a55fb061caedad8af68854e99f4e17",
+    "upstream-overlay/AsusSMC/FXFnPolicy.hpp": "f469c446d18938180a636f033b5a2ad3e863f5968faa0f6624071bf63db8fe92",
     "upstream-overlay/LICENSE.md": "5e8686c3ddbc77a6cc89d2c2231e90f5835167cf4b48e41fda44317b2f6ae8a8"
   }
 }

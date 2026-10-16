@@ -1,0 +1,9 @@
+
+Intel ACPI Component Architecture
+ASL+ Optimizing Compiler/Disassembler version 20250404
+Copyright (c) 2000 - 2025 Intel Corporation
+
+ASL Input:     /tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl -    6207 bytes     74 keywords      0 source lines
+AML Output:    /tmp/fx505gt-fn-review/acpica-validation/SSDT-FX505GT-Fn-BIOS303-corrected.aml -    1289 bytes     56 opcodes      18 named objects
+
+Compilation successful. 0 Errors, 0 Warnings, 0 Remarks, 0 Optimizations

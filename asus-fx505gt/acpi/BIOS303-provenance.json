@@ -1,0 +1,188 @@
+{
+  "source_url": "https://github.com/hackbnw/faustus/files/5759074/dsdt.aml.gz",
+  "provenance_url": "https://github.com/hackbnw/faustus/issues/56",
+  "reported_bios": "FX505GT.303",
+  "reported_bios_release": "2019-08-29",
+  "reported_board": "FX505GT",
+  "file_sha256": "f1b78256c05a9dc8d31b33631d2d91c4a3490335f4a5025a9ca1f495043b3eda",
+  "length": 291231,
+  "hotkey_scope": "\\_SB.PCI0.LPCB.EC0",
+  "header_hex": "445344549f71040002765f415355535f4e6f7465626f6f6b09200701494e544c27051620",
+  "oem_id": "_ASUS_",
+  "oem_table_id": "Notebook",
+  "oem_revision": 17244169,
+  "methods": [
+    {
+      "key": "F1",
+      "method": "_Q0A",
+      "renamed_method": "XQ0A",
+      "definition_name_offset": 289359,
+      "method_start": 289357,
+      "method_end": 289401,
+      "method_sha256": "65e7efe643205f3a0f966e09805b266e742eafb3b7e5ca40e905a9e9f47f9535",
+      "event": 62721
+    },
+    {
+      "key": "F2",
+      "method": "_Q0B",
+      "renamed_method": "XQ0B",
+      "definition_name_offset": 289404,
+      "method_start": 289401,
+      "method_end": 289467,
+      "method_sha256": "d639f3facada43772e97f47726a36b07d35348cec62408bd0cae704a356301fd",
+      "event": 62722
+    },
+    {
+      "key": "F3",
+      "method": "_Q0C",
+      "renamed_method": "XQ0C",
+      "definition_name_offset": 289470,
+      "method_start": 289467,
+      "method_end": 289537,
+      "method_sha256": "261d51f9fd64247ebc5ad1e67d74bef42da12fb6a1a25ce5827ec6fdc35b56eb",
+      "event": 62723
+    },
+    {
+      "key": "F4",
+      "method": "_Q0D",
+      "renamed_method": "XQ0D",
+      "definition_name_offset": 289539,
+      "method_start": 289537,
+      "method_end": 289572,
+      "method_sha256": "083c416bb5769132ca4008e3638bb70d32b8a3a596e7dcf0a697895f9ee907b9",
+      "event": 62724
+    },
+    {
+      "key": "F5",
+      "method": "_Q0E",
+      "renamed_method": "XQ0E",
+      "definition_name_offset": 289574,
+      "method_start": 289572,
+      "method_end": 289607,
+      "method_sha256": "ad49a1b18555d32dc99ff3d16bfa38224d2230132ed3ba58b8a31204c61bed43",
+      "event": 62725
+    },
+    {
+      "key": "F6",
+      "method": "_Q0F",
+      "renamed_method": "XQ0F",
+      "definition_name_offset": 289610,
+      "method_start": 289607,
+      "method_end": 289689,
+      "method_sha256": "023c111b47dd59b70e607620436400ad106c4a89f4d698eb2f9aa6d5675a23b1",
+      "event": 62726
+    },
+    {
+      "key": "F7",
+      "method": "_Q10",
+      "renamed_method": "XQ10",
+      "definition_name_offset": 289691,
+      "method_start": 289689,
+      "method_end": 289722,
+      "method_sha256": "3eb5a5f09ca8347e34cba5d28e2de7311254aa44b7d0cb22d3405f69004e3f01",
+      "event": 62727
+    },
+    {
+      "key": "F8",
+      "method": "_Q11",
+      "renamed_method": "XQ11",
+      "definition_name_offset": 289724,
+      "method_start": 289722,
+      "method_end": 289755,
+      "method_sha256": "6e640e11f326240bcd882ac8792f56a5c662e140684ce00c06dbffbc1e60e251",
+      "event": 62728
+    },
+    {
+      "key": "F9",
+      "method": "_Q12",
+      "renamed_method": "XQ12",
+      "definition_name_offset": 289757,
+      "method_start": 289755,
+      "method_end": 289790,
+      "method_sha256": "fed63f907e3d5d538beb09dd94f06c57d44a38046887f628fff58fa715ed9afb",
+      "event": 62729
+    },
+    {
+      "key": "F10",
+      "method": "_Q13",
+      "renamed_method": "XQ13",
+      "definition_name_offset": 289792,
+      "method_start": 289790,
+      "method_end": 289848,
+      "method_sha256": "8805a852e99ae5915a04f5b0b3fb1a4de049289958afc67fcd0028e74812e840",
+      "event": 62730
+    },
+    {
+      "key": "F11",
+      "method": "_Q14",
+      "renamed_method": "XQ14",
+      "definition_name_offset": 289850,
+      "method_start": 289848,
+      "method_end": 289869,
+      "method_sha256": "071a4ef18c2a4074de737dfdd9686322e73bf2c4921b0c21fc7e14fb4e9d8fec",
+      "event": 62731
+    },
+    {
+      "key": "F12",
+      "method": "_Q15",
+      "renamed_method": "XQ15",
+      "definition_name_offset": 289871,
+      "method_start": 289869,
+      "method_end": 289901,
+      "method_sha256": "5f751965cb3a67dab065abcb4d3e213bc8d226d2ad1c24e09306bf84416020f5",
+      "event": 62732
+    },
+    {
+      "key": "Up",
+      "method": "_Q6B",
+      "renamed_method": "XQ6B",
+      "definition_name_offset": 289903,
+      "method_start": 289901,
+      "method_end": 289936,
+      "method_sha256": "fa6726f4d20bf08a4910395dd93e4ab2c80ec380314045c92fae71a09840c22a",
+      "event": 62733
+    },
+    {
+      "key": "Down",
+      "method": "_Q6C",
+      "renamed_method": "XQ6C",
+      "definition_name_offset": 289938,
+      "method_start": 289936,
+      "method_end": 289971,
+      "method_sha256": "b41631be531a0fd195f87502160207873bd3a6958bc46110b6d8ee986a5f30b9",
+      "event": 62734
+    }
+  ],
+  "required_absent_names": [
+    "FXEN",
+    "SKBV",
+    "XQ0A",
+    "XQ0B",
+    "XQ0C",
+    "XQ0D",
+    "XQ0E",
+    "XQ0F",
+    "XQ10",
+    "XQ11",
+    "XQ12",
+    "XQ13",
+    "XQ14",
+    "XQ15",
+    "XQ6B",
+    "XQ6C"
+  ],
+  "keyboard_light_methods": [
+    {
+      "path": "\\SLKI",
+      "start": 275811,
+      "end_exclusive": 276256,
+      "method_sha256": "39a48e934a857d01322a60c8aea79a91e7befe2fb57b91264c4bbe7b29fa0470"
+    },
+    {
+      "path": "\\_SB.ATKD.SLKB",
+      "start": 288714,
+      "end_exclusive": 288727,
+      "method_sha256": "c1da47d8cdefac3fffe8f677b1318bd78f506a5ccebab6aa911b6c1f675e48ec"
+    }
+  ]
+}

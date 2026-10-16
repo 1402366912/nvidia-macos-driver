@@ -1,0 +1,199 @@
+Error    6126 -  Compiler aborting due to parser-detected syntax error(s)
+
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl      8:     External (\_SB.ATKD.IANE, MethodObj, 1)
+Error    6126 -                                                                                             syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl      9:     External (\SLKI, MethodObj, 1)
+Error    6126 -                                                                                    syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     10:     External (\_SB.PCI0.LPCB.EC0.XQ0A, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     11:     External (\_SB.PCI0.LPCB.EC0.XQ0B, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     12:     External (\_SB.PCI0.LPCB.EC0.XQ0C, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     13:     External (\_SB.PCI0.LPCB.EC0.XQ0D, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     14:     External (\_SB.PCI0.LPCB.EC0.XQ0E, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     15:     External (\_SB.PCI0.LPCB.EC0.XQ0F, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     16:     External (\_SB.PCI0.LPCB.EC0.XQ10, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     17:     External (\_SB.PCI0.LPCB.EC0.XQ11, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     18:     External (\_SB.PCI0.LPCB.EC0.XQ12, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     19:     External (\_SB.PCI0.LPCB.EC0.XQ13, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     20:     External (\_SB.PCI0.LPCB.EC0.XQ14, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     21:     External (\_SB.PCI0.LPCB.EC0.XQ15, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     22:     External (\_SB.PCI0.LPCB.EC0.XQ6B, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     23:     External (\_SB.PCI0.LPCB.EC0.XQ6C, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+Error    6126 -  Compiler aborting due to parser-detected syntax error(s)
+
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl      8:     External (\_SB.ATKD.IANE, MethodObj, 1)
+Error    6126 -                                                                                             syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl      9:     External (\SLKI, MethodObj, 1)
+Error    6126 -                                                                                    syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     10:     External (\_SB.PCI0.LPCB.EC0.XQ0A, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     11:     External (\_SB.PCI0.LPCB.EC0.XQ0B, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     12:     External (\_SB.PCI0.LPCB.EC0.XQ0C, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     13:     External (\_SB.PCI0.LPCB.EC0.XQ0D, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     14:     External (\_SB.PCI0.LPCB.EC0.XQ0E, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     15:     External (\_SB.PCI0.LPCB.EC0.XQ0F, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     16:     External (\_SB.PCI0.LPCB.EC0.XQ10, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     17:     External (\_SB.PCI0.LPCB.EC0.XQ11, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     18:     External (\_SB.PCI0.LPCB.EC0.XQ12, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     19:     External (\_SB.PCI0.LPCB.EC0.XQ13, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     20:     External (\_SB.PCI0.LPCB.EC0.XQ14, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     21:     External (\_SB.PCI0.LPCB.EC0.XQ15, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     22:     External (\_SB.PCI0.LPCB.EC0.XQ6B, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     23:     External (\_SB.PCI0.LPCB.EC0.XQ6C, MethodObj, 0)
+Error    6126 -                                                                                                      syntax error ^ 
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     33:                 \_SB.ATKD.IANE (0xF501)
+Error    6084 -                                                                        Object does not exist ^  (\_SB.ATKD.IANE)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     37:                 XQ0A ()
+Error    6084 -                                                              Object does not exist ^  (XQ0A)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     45:                 \_SB.ATKD.IANE (0xF502)
+Error    6084 -                                                                        Object does not exist ^  (\_SB.ATKD.IANE)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     49:                 XQ0B ()
+Error    6084 -                                                              Object does not exist ^  (XQ0B)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     57:                 \_SB.ATKD.IANE (0xF503)
+Error    6084 -                                                                        Object does not exist ^  (\_SB.ATKD.IANE)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     61:                 XQ0C ()
+Error    6084 -                                                              Object does not exist ^  (XQ0C)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     69:                 \_SB.ATKD.IANE (0xF504)
+Error    6084 -                                                                        Object does not exist ^  (\_SB.ATKD.IANE)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     73:                 XQ0D ()
+Error    6084 -                                                              Object does not exist ^  (XQ0D)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     81:                 \_SB.ATKD.IANE (0xF505)
+Error    6084 -                                                                        Object does not exist ^  (\_SB.ATKD.IANE)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     85:                 XQ0E ()
+Error    6084 -                                                              Object does not exist ^  (XQ0E)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     93:                 \_SB.ATKD.IANE (0xF506)
+Error    6084 -                                                                        Object does not exist ^  (\_SB.ATKD.IANE)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl     97:                 XQ0F ()
+Error    6084 -                                                              Object does not exist ^  (XQ0F)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl    105:                 \_SB.ATKD.IANE (0xF507)
+Error    6084 -                                                                        Object does not exist ^  (\_SB.ATKD.IANE)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl    109:                 XQ10 ()
+Error    6084 -                                                              Object does not exist ^  (XQ10)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl    117:                 \_SB.ATKD.IANE (0xF508)
+Error    6084 -                                                                        Object does not exist ^  (\_SB.ATKD.IANE)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl    121:                 XQ11 ()
+Error    6084 -                                                              Object does not exist ^  (XQ11)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl    129:                 \_SB.ATKD.IANE (0xF509)
+Error    6084 -                                                                        Object does not exist ^  (\_SB.ATKD.IANE)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl    133:                 XQ12 ()
+Error    6084 -                                                              Object does not exist ^  (XQ12)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl    141:                 \_SB.ATKD.IANE (0xF50A)
+Error    6084 -                                                                        Object does not exist ^  (\_SB.ATKD.IANE)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl    145:                 XQ13 ()
+Error    6084 -                                                              Object does not exist ^  (XQ13)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl    153:                 \_SB.ATKD.IANE (0xF50B)
+Error    6084 -                                                                        Object does not exist ^  (\_SB.ATKD.IANE)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl    157:                 XQ14 ()
+Error    6084 -                                                              Object does not exist ^  (XQ14)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl    165:                 \_SB.ATKD.IANE (0xF50C)
+Error    6084 -                                                                        Object does not exist ^  (\_SB.ATKD.IANE)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl    169:                 XQ15 ()
+Error    6084 -                                                              Object does not exist ^  (XQ15)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl    177:                 \_SB.ATKD.IANE (0xF50D)
+Error    6084 -                                                                        Object does not exist ^  (\_SB.ATKD.IANE)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl    181:                 XQ6B ()
+Error    6084 -                                                              Object does not exist ^  (XQ6B)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl    189:                 \_SB.ATKD.IANE (0xF50E)
+Error    6084 -                                                                        Object does not exist ^  (\_SB.ATKD.IANE)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl    193:                 XQ6C ()
+Error    6084 -                                                              Object does not exist ^  (XQ6C)
+
+/tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl    210:             Return (\SLKI (Local0))
+Error    6084 -                                                                   Object does not exist ^  (\SLKI)
+
+
+Intel ACPI Component Architecture
+ASL+ Optimizing Compiler/Disassembler version 20250404
+Copyright (c) 2000 - 2025 Intel Corporation
+
+Input file:    /tmp/fx505gt-profile-bridge/deliverable/acpi/SSDT-FX505GT-Fn-BIOS303.dsl - Compilation aborted due to parser-detected syntax error(s)
+Hex Dump:      /tmp/fx505gt-fn-review/acpica-validation/SSDT-FX505GT-Fn-BIOS303.hex -    9103 bytes
+
+Compilation failed. 46 Errors, 0 Warnings, 0 Remarks
+No AML files were generated due to syntax error(s)

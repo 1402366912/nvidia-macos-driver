@@ -63,6 +63,13 @@ public:
 private:
     friend class AsusSMCProfileUserClient;
     fx::Policy fxPolicy;
+    fx::FnQueue fxFnQueue;
+    AsusSMCProfileUserClient *fxSessionClient {nullptr}; // Gate-owned identity, not dereferenced.
+    task_t fxSessionTask {TASK_NULL}; // Retained while claimed.
+    uint64_t fxSessionPollNS {0};
+    bool fxFullyAwake {false};
+    void fxReleaseSession();
+    bool fxRouteFn(uint32_t code, uint64_t now);
     bool fxWmiVerified {false};
     bool fxRunning {false};
     IONotifier *fxPowerNotifier {nullptr};
