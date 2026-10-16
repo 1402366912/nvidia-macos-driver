@@ -238,7 +238,20 @@ diff --git a/AsusSMC/AsusSMC.cpp b/AsusSMC/AsusSMC.cpp
  }
  
  void AsusSMC::initATKDevice() {
-@@ -934,3 +959,5 @@
+@@ -399,6 +424,12 @@
+ }
+ 
+ void AsusSMC::startATKDevice() {
++    // Expose the kernel-visible loaded table for exact Fn-profile matching on the opted-in model.
++    if (getProperty("FX505GTProfileBridgeEnabled") == kOSBooleanTrue) {
++        const OSData *table = atkDevice->getACPITableData("DSDT", 0);
++        if (table) setProperty("FX505GTDSDT", const_cast<OSData *>(table));
++    }
++
+     // Check direct ACPI messaging support
+     if (atkDevice->validateObject("DMES") == kIOReturnSuccess) {
+         DBGLOG("atk", "Direct ACPI message is supported");
+@@ -934,3 +965,5 @@
      // It is not safe to unload VirtualSMC plugins!
      return KERN_FAILURE;
  }
@@ -298,7 +311,15 @@ diff --git a/AsusSMC/AsusSMC.hpp b/AsusSMC/AsusSMC.hpp
      struct guid_block {
          char guid[16];
          union {
-@@ -93,7 +123,7 @@
+@@ -70,6 +100,7 @@
+     struct wmi_args {
+         uint32_t arg0;
+         uint32_t arg1;
++        uint32_t reserved[3]; // FX505GT WMxx expects the complete 20-byte input buffer.
+     } __packed;
+ 
+     enum {
+@@ -93,7 +124,7 @@
      static constexpr uint8_t NOTIFY_BRIGHTNESS_DOWN_MIN = 0x20;
      static constexpr uint8_t NOTIFY_BRIGHTNESS_DOWN_MAX = 0x2F;
  

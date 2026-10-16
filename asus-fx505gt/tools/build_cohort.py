@@ -44,7 +44,7 @@ def verify_delivery():
         entries[name] = digest
     if any(p.is_symlink() for p in BASE.rglob('*')):
         raise ValueError('Symlinks are not allowed in delivered source')
-    actual = {str(p.relative_to(BASE)) for p in BASE.rglob('*') if p.is_file()}
+    actual = {p.relative_to(BASE).as_posix() for p in BASE.rglob('*') if p.is_file()}
     actual.discard('MANIFEST.sha256')
     if actual != set(entries):
         raise ValueError('Unmanifested/missing component files; use a clean delivered source directory')

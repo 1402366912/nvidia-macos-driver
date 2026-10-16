@@ -424,6 +424,12 @@ void AsusSMC::initVirtualKeyboard() {
 }
 
 void AsusSMC::startATKDevice() {
+    // Expose the kernel-visible loaded table for exact Fn-profile matching on the opted-in model.
+    if (getProperty("FX505GTProfileBridgeEnabled") == kOSBooleanTrue) {
+        const OSData *table = atkDevice->getACPITableData("DSDT", 0);
+        if (table) setProperty("FX505GTDSDT", const_cast<OSData *>(table));
+    }
+
     // Check direct ACPI messaging support
     if (atkDevice->validateObject("DMES") == kIOReturnSuccess) {
         DBGLOG("atk", "Direct ACPI message is supported");

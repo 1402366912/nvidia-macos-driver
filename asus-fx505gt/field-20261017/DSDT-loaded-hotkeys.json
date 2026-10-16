@@ -1,0 +1,202 @@
+{
+  "table_kind": "kernel-visible loaded DSDT; not established original firmware bytes",
+  "sha256": "2a872978e36c86480ca6981249b65bc68f30906a444e40732690b4d7750b21d6",
+  "length": 291262,
+  "checksum_mod256": 0,
+  "header_hex": "44534454be710400026c5f415355535f4e6f7465626f6f6b09200701494e544c27051620",
+  "public_BIOS303_fixture_sha256": "f1b78256c05a9dc8d31b33631d2d91c4a3490335f4a5025a9ca1f495043b3eda",
+  "public_BIOS303_fixture_length": 291231,
+  "whole_table_matches_public_fixture": false,
+  "methods": [
+    {
+      "name": "_Q0A",
+      "start": 289388,
+      "name_offset": 289390,
+      "end_exclusive": 289432,
+      "method_sha256": "65e7efe643205f3a0f966e09805b266e742eafb3b7e5ca40e905a9e9f47f9535"
+    },
+    {
+      "name": "_Q0B",
+      "start": 289432,
+      "name_offset": 289435,
+      "end_exclusive": 289498,
+      "method_sha256": "d639f3facada43772e97f47726a36b07d35348cec62408bd0cae704a356301fd"
+    },
+    {
+      "name": "_Q0C",
+      "start": 289498,
+      "name_offset": 289501,
+      "end_exclusive": 289568,
+      "method_sha256": "261d51f9fd64247ebc5ad1e67d74bef42da12fb6a1a25ce5827ec6fdc35b56eb"
+    },
+    {
+      "name": "_Q0D",
+      "start": 289568,
+      "name_offset": 289570,
+      "end_exclusive": 289603,
+      "method_sha256": "083c416bb5769132ca4008e3638bb70d32b8a3a596e7dcf0a697895f9ee907b9"
+    },
+    {
+      "name": "_Q0E",
+      "start": 289603,
+      "name_offset": 289605,
+      "end_exclusive": 289638,
+      "method_sha256": "ad49a1b18555d32dc99ff3d16bfa38224d2230132ed3ba58b8a31204c61bed43"
+    },
+    {
+      "name": "_Q0F",
+      "start": 289638,
+      "name_offset": 289641,
+      "end_exclusive": 289720,
+      "method_sha256": "023c111b47dd59b70e607620436400ad106c4a89f4d698eb2f9aa6d5675a23b1"
+    },
+    {
+      "name": "_Q10",
+      "start": 289720,
+      "name_offset": 289722,
+      "end_exclusive": 289753,
+      "method_sha256": "3eb5a5f09ca8347e34cba5d28e2de7311254aa44b7d0cb22d3405f69004e3f01"
+    },
+    {
+      "name": "_Q11",
+      "start": 289753,
+      "name_offset": 289755,
+      "end_exclusive": 289786,
+      "method_sha256": "6e640e11f326240bcd882ac8792f56a5c662e140684ce00c06dbffbc1e60e251"
+    },
+    {
+      "name": "_Q12",
+      "start": 289786,
+      "name_offset": 289788,
+      "end_exclusive": 289821,
+      "method_sha256": "fed63f907e3d5d538beb09dd94f06c57d44a38046887f628fff58fa715ed9afb"
+    },
+    {
+      "name": "_Q13",
+      "start": 289821,
+      "name_offset": 289823,
+      "end_exclusive": 289879,
+      "method_sha256": "8805a852e99ae5915a04f5b0b3fb1a4de049289958afc67fcd0028e74812e840"
+    },
+    {
+      "name": "_Q14",
+      "start": 289879,
+      "name_offset": 289881,
+      "end_exclusive": 289900,
+      "method_sha256": "071a4ef18c2a4074de737dfdd9686322e73bf2c4921b0c21fc7e14fb4e9d8fec"
+    },
+    {
+      "name": "_Q15",
+      "start": 289900,
+      "name_offset": 289902,
+      "end_exclusive": 289932,
+      "method_sha256": "5f751965cb3a67dab065abcb4d3e213bc8d226d2ad1c24e09306bf84416020f5"
+    },
+    {
+      "name": "_Q6B",
+      "start": 289932,
+      "name_offset": 289934,
+      "end_exclusive": 289967,
+      "method_sha256": "fa6726f4d20bf08a4910395dd93e4ab2c80ec380314045c92fae71a09840c22a"
+    },
+    {
+      "name": "_Q6C",
+      "start": 289967,
+      "name_offset": 289969,
+      "end_exclusive": 290002,
+      "method_sha256": "b41631be531a0fd195f87502160207873bd3a6958bc46110b6d8ee986a5f30b9"
+    }
+  ],
+  "dsl_paths": [
+    {
+      "path": "\\BRTN",
+      "line": 11888
+    },
+    {
+      "path": "\\_SB.WFDE._WED",
+      "line": 34045
+    },
+    {
+      "path": "\\WMI0._WED",
+      "line": 57374
+    },
+    {
+      "path": "\\SLKI",
+      "line": 60328
+    },
+    {
+      "path": "\\_SB.ATKD.GANQ",
+      "line": 60746
+    },
+    {
+      "path": "\\_SB.ATKD.IANE",
+      "line": 60761
+    },
+    {
+      "path": "\\_SB.ATKD._WED",
+      "line": 62902
+    },
+    {
+      "path": "\\_SB.ATKD.SLKB",
+      "line": 63381
+    },
+    {
+      "path": "\\_SB.PCI0.LPCB.EC0._Q0A",
+      "line": 63703
+    },
+    {
+      "path": "\\_SB.PCI0.LPCB.EC0._Q0B",
+      "line": 63715
+    },
+    {
+      "path": "\\_SB.PCI0.LPCB.EC0._Q0C",
+      "line": 63729
+    },
+    {
+      "path": "\\_SB.PCI0.LPCB.EC0._Q0D",
+      "line": 63744
+    },
+    {
+      "path": "\\_SB.PCI0.LPCB.EC0._Q0E",
+      "line": 63753
+    },
+    {
+      "path": "\\_SB.PCI0.LPCB.EC0._Q0F",
+      "line": 63762
+    },
+    {
+      "path": "\\_SB.PCI0.LPCB.EC0._Q10",
+      "line": 63783
+    },
+    {
+      "path": "\\_SB.PCI0.LPCB.EC0._Q11",
+      "line": 63794
+    },
+    {
+      "path": "\\_SB.PCI0.LPCB.EC0._Q12",
+      "line": 63805
+    },
+    {
+      "path": "\\_SB.PCI0.LPCB.EC0._Q13",
+      "line": 63814
+    },
+    {
+      "path": "\\_SB.PCI0.LPCB.EC0._Q14",
+      "line": 63830
+    },
+    {
+      "path": "\\_SB.PCI0.LPCB.EC0._Q15",
+      "line": 63836
+    },
+    {
+      "path": "\\_SB.PCI0.LPCB.EC0._Q6B",
+      "line": 63845
+    },
+    {
+      "path": "\\_SB.PCI0.LPCB.EC0._Q6C",
+      "line": 63854
+    }
+  ],
+  "raw_table_retained196": true,
+  "method_definitions_matching_public_fixture": 14
+}

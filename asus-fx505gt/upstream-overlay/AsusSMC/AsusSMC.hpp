@@ -100,6 +100,7 @@ private:
     struct wmi_args {
         uint32_t arg0;
         uint32_t arg1;
+        uint32_t reserved[3]; // FX505GT WMxx expects the complete 20-byte input buffer.
     } __packed;
 
     enum {

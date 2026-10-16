@@ -1,0 +1,10 @@
+abi=1 state=ready backend=2 supported_profile_mask=0x7
+enabled=1 model_declared=1 model_verified=0 wmi_verified=1 fn_f5_enabled=1
+current_profile=unknown current_profile_readback=unavailable
+last_requested=silent request_source=1 request_status=1
+last_accepted=silent accepted_source=1 accepted_count=1
+last_request_uptime_ns=73598442539 last_accepted_uptime_ns=73613669107
+last_write_raw_status=1 raw=0x00000001 ioreturn=0x00000000
+thermal_probe_status=1 raw=0x00010003 ioreturn=0x00000000
+fan_probe_status=1 raw=0x00010003 ioreturn=0x00000000
+fn_events=0 fn_suppressed=0

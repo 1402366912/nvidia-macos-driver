@@ -82,8 +82,12 @@ static NSString *state(uint32_t s) {
         if(events.count>1) _status=[_status stringByAppendingString:@" Additional queued actions were discarded."];
     }
 }
+- (BOOL)helperTrusted {
+    NSString *reason=nil; BOOL trusted=FXHelperTrusted(&reason);
+    _helperReason=reason; return trusted;
+}
 - (void)menuWillOpen:(NSMenu *)menu {
-    (void)menu; [self refresh]; _trusted=FXHelperTrusted(&_helperReason); [self rebuild];
+    (void)menu; [self refresh]; _trusted=[self helperTrusted]; [self rebuild];
 }
 - (NSMenuItem *)add:(NSString *)title action:(SEL)selector tag:(NSInteger)tag enabled:(BOOL)enabled {
     NSMenuItem *item=[[NSMenuItem alloc] initWithTitle:title action:selector keyEquivalent:@""];
@@ -118,7 +122,7 @@ static NSString *state(uint32_t s) {
     if(_busy || sender.tag<0 || sender.tag>2 || !FXIsConsoleUser()) return;
     [self refresh];
     if(!_valid || _snapshot.state!=FXReady || !(_snapshot.supportedProfiles&(1u<<sender.tag))) return;
-    if(!FXHelperTrusted(&_helperReason)) { _status=_helperReason; return; }
+    if(![self helperTrusted]) { _status=_helperReason; return; }
     const uint64_t generation=FXSessionGeneration();
     NSAlert *alert=[NSAlert new]; alert.messageText=[@"Request " stringByAppendingString:profile((uint32_t)sender.tag)];
     alert.informativeText=@"This requests a firmware performance/fan policy. It does not measure the current mode or RPM. macOS authorization can be cancelled and may reuse a recent authorization. No password is stored by this app.";
@@ -128,7 +132,7 @@ static NSString *state(uint32_t s) {
     if(generation!=FXSessionGeneration() || !FXIsConsoleUser()) { _status=@"Profile request cancelled after session change."; _busy=NO; return; }
     // Repeat trust check after the confirmation. Root can replace a helper,
     // but ordinary users cannot change the validated non-writable path.
-    if(!FXHelperTrusted(&_helperReason)) { _status=_helperReason; _busy=NO; return; }
+    if(![self helperTrusted]) { _status=_helperReason; _busy=NO; return; }
     if(generation!=FXSessionGeneration() || !FXIsConsoleUser()) { _status=@"Profile request cancelled after session change."; _busy=NO; return; }
     NSString *script=nil;
     switch(sender.tag) {
