@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "purpose": "Fixed source interfaces for the FX505GT build-only cohort; native link/runtime qualification remains pending",
+  "sources": {
+    "AsusSMC": {"repository": "https://github.com/hieplpvip/AsusSMC", "commit": "c15d2f297c86b65a3cb866cc2bcece595c136417", "license": "MIT"},
+    "Lilu": {"repository": "https://github.com/acidanthera/Lilu", "commit": "89af9d3df5c1bcd91ffb8905d56be61003cc8c84", "license": "BSD-3-Clause", "role": "Header source only; no Lilu runtime binary is built or bundled"},
+    "VirtualSMC": {"repository": "https://github.com/acidanthera/VirtualSMC", "commit": "2db1cd9481679eaaaf861e26241987431ee49af5", "license": "BSD-3-Clause", "role": "VirtualSMCSDK header source only; no VirtualSMC runtime binary is built or bundled"},
+    "MacKernelSDK": {"repository": "https://github.com/acidanthera/MacKernelSDK", "commit": "3f750085caa17ec3a7880f11c11bf4f48cd6a164", "license": "Per-file Apple/APSL/BSD notices and LICENSE.txt", "role": "Public kernel headers and tracked x86_64 libkmod.a build input"}
+  },
+  "upstream_project_sha256": "99247aba55a36c1666d8a4ed593b03221e6f337d2e11f4a01c7e956535720d7b",
+  "build": {"target": "AsusSMC", "configuration": "Release", "architecture": "x86_64", "minimum_macos": "10.15", "profile_abi": 1, "fn_abi": 2, "connection_type": "0x46583250", "iasl_version": "20250404"},
+  "sdk_selection": "Lilu and VirtualSMC pins are contemporary to the pinned AsusSMC source; all four actual target TUs compile against these interfaces and the reused public header closure. This is not final Apple SDK linkage or runtime compatibility evidence.",
+  "apple_tools": "Native Xcode/macOS SDK and compiler must already exist on the build host. Their exact versions and SDKSettings hash are recorded, not assumed or installed. No Apple SDK is redistributed.",
+  "acpi": {"source": "acpi/SSDT-FX505GT-Fn-BIOS303.dsl", "default_enabled": false, "original_dsdt_sha256": "f1b78256c05a9dc8d31b33631d2d91c4a3490335f4a5025a9ca1f495043b3eda", "rename_tool": "tools/prepare_bios303_dsdt.py", "note": "Build compiles the SSDT only; deployment also requires the separately guarded exact-fixture binary rename. Full DSDT DSL recompilation is not the delivery path."}
+}

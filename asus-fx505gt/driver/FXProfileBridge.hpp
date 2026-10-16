@@ -1,8 +1,14 @@
 /* SPDX-License-Identifier: MIT */
 #ifndef FX_PROFILE_BRIDGE_HPP
 #define FX_PROFILE_BRIDGE_HPP
+// Lilu uses PRIVATE as a visibility attribute; public SDK headers test it
+// as a numeric build flag. Keep that unrelated macro out of SDK includes,
+// then restore it for existing Lilu/VirtualSMC declarations.
+#pragma push_macro("PRIVATE")
+#undef PRIVATE
 #include <IOKit/IOUserClient.h>
 #include <IOKit/IOLocks.h>
+#pragma pop_macro("PRIVATE")
 #include "FXProfilePolicy.hpp"
 #include "FXFnPolicy.hpp"
 class AsusSMC;

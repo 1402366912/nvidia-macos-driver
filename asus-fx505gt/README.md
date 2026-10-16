@@ -1,8 +1,11 @@
-# FX505GT macOS profiles and all documented Fn keys: source preview v3
+# FX505GT macOS profiles and all documented Fn keys: source preview v4
 
 Status: source WIP. Includes native AppKit menu-bar app source, CLI, a bounded
 AsusSMC backend, and a complete source-backed Fn matrix. Apple SDK native builds and
-hardware validation remain pending; the SSDT has passed an offline ACPICA build. See [FN_MATRIX.md](FN_MATRIX.md),
+hardware validation remain pending; the SSDT has passed an offline ACPICA build.
+All four actual kext C++ translation units also pass a recorded Mach-O object
+compile. See [BUILD_COHORT.md](BUILD_COHORT.md) for fixed inputs and one native
+build-only entry. See [FN_MATRIX.md](FN_MATRIX.md),
 [app/README.md](app/README.md) and [acpi/README.md](acpi/README.md).
 
 This is an isolated sibling of the NVIDIA GPU work. It adds a real, bounded
@@ -120,17 +123,15 @@ selector is added.
    nor installs/builds/loads anything. The patch includes all new driver/ABI
    files. `FXProfileBridge.inc` is deliberately included by `AsusSMC.cpp`, so
    the pinned Xcode source target cannot silently omit the implementation.
-3. Use the upstream build requirements, Apple kernel SDK, and compatible
-   Lilu/VirtualSMC source dependencies. Review upstream bootstrap before using
-   it; this preview does not execute it or pin/download its transitive inputs.
-   List the existing Xcode schemes with `xcodebuild -list -project
-   AsusSMC.xcodeproj`, then build the desired AsusSMC target with signing disabled
-   only as a **build option**, not a system security change. Building the dated
-   upstream against a current SDK may require separate compatibility work.
+3. Use the fixed source pins and single build-only entry in
+   [BUILD_COHORT.md](BUILD_COHORT.md). It verifies clean inputs, stages SDK header
+   sources, removes the old daemon/installer/ZIP build edges, and builds the
+   matching kext/app/CLI/radio/SSDT cohort without installing or executing it.
+   The full native build remains pending; do not use an unpinned bootstrap.
 4. On a macOS build host, build only the matching CLI:
 
    ```sh
-   ./tools/build_cli.sh /desired/output/fxprofile
+   sh tools/build_cli.sh /desired/output/fxprofile
    ```
 
    This does not run it. On a separately authorized/validated machine with the
@@ -165,13 +166,15 @@ unavailability and shutdown. A C compilation also checks the shared ABI size
 and offsets. On Linux it also tests the actual CLI's
 argument parser and explicit refusal to fake a macOS device connection.
 
-`validation/portable-v2-tests.txt` records the expanded current suite;
+`validation/portable-v4-tests.txt` records the current suite;
+`validation/kernel-object-compile.json` records the separate real four-TU object check;
 `validation/bios303-offline-tests.txt` records the exact public fixture test.
 `validation/portable-tests.txt` retains the first source milestone result. The initial strict
 compiler warning and its fix are retained separately. Portable tests do **not**
-compile or validate the IOKit adapter, privileges, driver attachment, command
-gate lifecycle, Xcode target, macOS ABI, ACPI methods, physical fan response,
-Fn event routing, or sleep/wake behavior. Those still need an Apple SDK build,
+validate the IOKit adapter, privileges, driver attachment, command gate lifecycle,
+Xcode target, macOS ABI, ACPI methods, physical fan response, Fn event routing or
+sleep/wake behavior. The separate object check compiles the actual kernel code
+but does not establish those runtime properties. Those still need an Apple SDK build,
 independent kernel review, and separately authorized hardware testing.
 
 ## Layout and licensing

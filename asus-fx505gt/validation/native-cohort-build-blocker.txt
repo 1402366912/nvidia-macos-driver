@@ -1,0 +1,1 @@
+Native cohort build requires macOS, Xcode and the Apple SDK; Linux object checks are separate

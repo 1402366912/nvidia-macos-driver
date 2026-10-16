@@ -12,7 +12,7 @@ out=$(CDPATH= cd -- "$out" && pwd)
 # or rebuilding that binary requires regenerating/rebuilding the app.
 version=$(cat "$base/cli/fxprofile.cpp" "$base/include/FXProfileABI.h" "$base/include/FXFnABI.h" | shasum -a 256 | awk '{print $1}')
 printf '#define FX_SOURCE_VERSION "%s"\n' "$version" > "$out/FXBuildIdentity.h"
-xcrun --sdk macosx clang++ -std=c++14 -Wall -Wextra -Werror -Wno-deprecated-declarations \
+xcrun --sdk macosx clang++ -arch x86_64 -std=c++14 -Wall -Wextra -Werror -Wno-deprecated-declarations \
   -mmacosx-version-min=10.15 -I"$base/include" -include "$out/FXBuildIdentity.h" \
   "$base/cli/fxprofile.cpp" -framework IOKit -framework CoreFoundation -o "$out/fxprofile"
 helperhash=$(shasum -a 256 "$out/fxprofile" | awk '{print $1}')
@@ -24,14 +24,14 @@ app="$out/FX505GT Control.app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Helpers"
 # Unprivileged fixed-command radio companion. The embedded plist supplies its
 # native privacy purpose; neither build nor app accepts a permission prompt.
-xcrun --sdk macosx clang++ -std=c++14 -fobjc-arc -Wall -Wextra -Werror \
+xcrun --sdk macosx clang++ -arch x86_64 -std=c++14 -fobjc-arc -Wall -Wextra -Werror \
   -Wno-deprecated-declarations -mmacosx-version-min=10.15 -I"$base/include" \
   "$base/helpers/fxradio.mm" -framework Foundation -framework IOBluetooth \
   -framework SystemConfiguration -Wl,-sectcreate,__TEXT,__info_plist,"$base/helpers/Info.plist" \
   -o "$app/Contents/Helpers/fxradio"
 radiohash=$(shasum -a 256 "$app/Contents/Helpers/fxradio" | awk '{print $1}')
 printf '#define FX_EXPECTED_RADIO_SHA256 "%s"\n' "$radiohash" >> "$out/FXBuildIdentity.h"
-xcrun --sdk macosx clang++ -std=c++14 -fobjc-arc -Wall -Wextra -Werror \
+xcrun --sdk macosx clang++ -arch x86_64 -std=c++14 -fobjc-arc -Wall -Wextra -Werror \
   -Wno-deprecated-declarations -mmacosx-version-min=10.15 \
   -I"$base/include" -I"$base/app" -I"$out" \
   "$base/app/main.mm" "$base/app/FXHelperTrust.mm" "$base/app/FXSessionActions.mm" \

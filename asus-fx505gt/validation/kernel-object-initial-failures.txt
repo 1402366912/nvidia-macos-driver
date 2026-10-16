@@ -1,0 +1,175 @@
+=== AsusSMC-first.log ===
+In file included from ${source}/AsusSMC/AsusSMC.cpp:8:
+${source}/AsusSMC/AsusSMC.hpp:15:10: fatal error: 'IOKit/pwr_mgt/RootDomain.h' file not found
+   15 | #include <IOKit/pwr_mgt/RootDomain.h>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+
+=== AsusSMC-01.log ===
+In file included from ${source}/AsusSMC/AsusSMC.cpp:8:
+In file included from ${source}/AsusSMC/AsusSMC.hpp:20:
+In file included from ${source}/VirtualAppleKeyboard/VirtualAppleKeyboard.hpp:8:
+${sdk_extra}/IOKit/hid/IOHIDDevice.h:32:10: fatal error: 'IOKit/hidsystem/IOHIDDescriptorParser.h' file not found
+   32 | #include <IOKit/hidsystem/IOHIDDescriptorParser.h>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+
+=== AsusSMC-02.log ===
+In file included from ${source}/AsusSMC/AsusSMC.cpp:8:
+In file included from ${source}/AsusSMC/AsusSMC.hpp:20:
+In file included from ${source}/VirtualAppleKeyboard/VirtualAppleKeyboard.hpp:8:
+${sdk_extra}/IOKit/hid/IOHIDDevice.h:33:10: fatal error: 'IOKit/hid/IOHIDKeys.h' file not found
+   33 | #include <IOKit/hid/IOHIDKeys.h>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+
+=== AsusSMC-03.log ===
+In file included from ${source}/AsusSMC/AsusSMC.cpp:8:
+In file included from ${source}/AsusSMC/AsusSMC.hpp:20:
+In file included from ${source}/VirtualAppleKeyboard/VirtualAppleKeyboard.hpp:8:
+In file included from ${sdk_extra}/IOKit/hid/IOHIDDevice.h:33:
+${sdk_extra}/IOKit/hid/IOHIDKeys.h:29:10: fatal error: 'IOKit/hidsystem/IOHIDParameter.h' file not found
+   29 | #include <IOKit/hidsystem/IOHIDParameter.h>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+
+=== AsusSMC-04.log ===
+In file included from ${source}/AsusSMC/AsusSMC.cpp:8:
+In file included from ${source}/AsusSMC/AsusSMC.hpp:20:
+In file included from ${source}/VirtualAppleKeyboard/VirtualAppleKeyboard.hpp:8:
+In file included from ${sdk_extra}/IOKit/hid/IOHIDDevice.h:33:
+In file included from ${sdk_extra}/IOKit/hid/IOHIDKeys.h:29:
+${sdk_extra}/IOKit/hidsystem/IOHIDParameter.h:41:10: fatal error: 'IOKit/hidsystem/IOLLEvent.h' file not found
+   41 | #include <IOKit/hidsystem/IOLLEvent.h>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+
+=== AsusSMC-05.log ===
+In file included from ${source}/AsusSMC/AsusSMC.cpp:8:
+In file included from ${source}/AsusSMC/AsusSMC.hpp:20:
+In file included from ${source}/VirtualAppleKeyboard/VirtualAppleKeyboard.hpp:8:
+In file included from ${sdk_extra}/IOKit/hid/IOHIDDevice.h:33:
+In file included from ${sdk_extra}/IOKit/hid/IOHIDKeys.h:29:
+${sdk_extra}/IOKit/hidsystem/IOHIDParameter.h:42:10: fatal error: 'IOKit/hid/IOHIDProperties.h' file not found
+   42 | #include <IOKit/hid/IOHIDProperties.h>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+
+=== AsusSMC-06.log ===
+In file included from ${source}/AsusSMC/AsusSMC.cpp:8:
+In file included from ${source}/AsusSMC/AsusSMC.hpp:20:
+In file included from ${source}/VirtualAppleKeyboard/VirtualAppleKeyboard.hpp:8:
+In file included from ${sdk_extra}/IOKit/hid/IOHIDDevice.h:33:
+In file included from ${sdk_extra}/IOKit/hid/IOHIDKeys.h:29:
+In file included from ${sdk_extra}/IOKit/hidsystem/IOHIDParameter.h:42:
+${sdk_extra}/IOKit/hid/IOHIDProperties.h:27:10: fatal error: 'IOKit/hid/IOHIDEventServiceKeys.h' file not found
+   27 | #include <IOKit/hid/IOHIDEventServiceKeys.h>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+
+=== AsusSMC-07.log ===
+In file included from ${source}/AsusSMC/AsusSMC.cpp:8:
+In file included from ${source}/AsusSMC/AsusSMC.hpp:20:
+In file included from ${source}/VirtualAppleKeyboard/VirtualAppleKeyboard.hpp:8:
+In file included from ${sdk_extra}/IOKit/hid/IOHIDDevice.h:33:
+${sdk_extra}/IOKit/hid/IOHIDKeys.h:33:10: fatal error: 'IOKit/hid/IOHIDDeviceTypes.h' file not found
+   33 | #include <IOKit/hid/IOHIDDeviceTypes.h>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+
+=== AsusSMC-08.log ===
+In file included from ${source}/AsusSMC/AsusSMC.cpp:8:
+In file included from ${source}/AsusSMC/AsusSMC.hpp:20:
+In file included from ${source}/VirtualAppleKeyboard/VirtualAppleKeyboard.hpp:8:
+In file included from ${sdk_extra}/IOKit/hid/IOHIDDevice.h:33:
+${sdk_extra}/IOKit/hid/IOHIDKeys.h:34:10: fatal error: 'IOKit/hid/IOHIDDeviceKeys.h' file not found
+   34 | #include <IOKit/hid/IOHIDDeviceKeys.h>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+
+=== AsusSMC-09.log ===
+In file included from ${source}/AsusSMC/AsusSMC.cpp:8:
+In file included from ${source}/AsusSMC/AsusSMC.hpp:20:
+In file included from ${source}/VirtualAppleKeyboard/VirtualAppleKeyboard.hpp:8:
+${sdk_extra}/IOKit/hid/IOHIDDevice.h:34:10: fatal error: 'IOKit/hid/IOHIDUsageTables.h' file not found
+   34 | #include <IOKit/hid/IOHIDUsageTables.h>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+
+=== AsusSMC-10.log ===
+In file included from ${source}/AsusSMC/AsusSMC.cpp:8:
+In file included from ${source}/AsusSMC/AsusSMC.hpp:20:
+In file included from ${source}/VirtualAppleKeyboard/VirtualAppleKeyboard.hpp:8:
+${sdk_extra}/IOKit/hid/IOHIDDevice.h:37:10: fatal error: 'HIDDriverKit/IOHIDDevice.h' file not found
+   37 | #include <HIDDriverKit/IOHIDDevice.h>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+
+=== AsusSMC-11.log ===
+In file included from ${source}/AsusSMC/AsusSMC.cpp:8:
+In file included from ${source}/AsusSMC/AsusSMC.hpp:20:
+In file included from ${source}/VirtualAppleKeyboard/VirtualAppleKeyboard.hpp:8:
+In file included from ${sdk_extra}/IOKit/hid/IOHIDDevice.h:37:
+${sdk_extra}/HIDDriverKit/IOHIDDevice.h:43:10: fatal error: 'HIDDriverKit/IOHIDDeviceTypes.h' file not found
+   43 | #include <HIDDriverKit/IOHIDDeviceTypes.h>
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+
+=== AsusSMC-12.log ===
+In file included from ${source}/AsusSMC/AsusSMC.cpp:8:
+In file included from ${source}/AsusSMC/AsusSMC.hpp:20:
+In file included from ${source}/VirtualAppleKeyboard/VirtualAppleKeyboard.hpp:8:
+In file included from ${sdk_extra}/IOKit/hid/IOHIDDevice.h:37:
+${sdk_extra}/HIDDriverKit/IOHIDDevice.h:44:10: fatal error: 'DriverKit/IOTypes.h' file not found
+   44 | #include <DriverKit/IOTypes.h>
+      |          ^~~~~~~~~~~~~~~~~~~~~
+1 error generated.
+
+=== AsusSMC-13.log ===
+In file included from ${source}/AsusSMC/AsusSMC.cpp:8:
+In file included from ${source}/AsusSMC/AsusSMC.hpp:21:
+In file included from ${source}/KernEventServer/KernEventServer.hpp:12:
+${sdk_extra}/sys/kern_event.h:41:10: fatal error: 'sys/sys_domain.h' file not found
+   41 | #include <sys/sys_domain.h>
+      |          ^~~~~~~~~~~~~~~~~~
+1 error generated.
+
+=== AsusSMC-14.log ===
+In file included from ${source}/AsusSMC/AsusSMC.cpp:8:
+In file included from ${source}/AsusSMC/AsusSMC.hpp:22:
+In file included from ${source}/AsusSMC/KeyImplementations.hpp:13:
+In file included from ${vsmc}/VirtualSMCSDK/kern_vsmcapi.hpp:11:
+${lilu}/Headers/kern_util.hpp:15:10: fatal error: 'libkern/OSDebug.h' file not found
+   15 | #include <libkern/OSDebug.h>
+      |          ^~~~~~~~~~~~~~~~~~~
+1 error generated.
+
+=== KeyImplementations.log ===
+In file included from ${source}/AsusSMC/KeyImplementations.cpp:9:
+In file included from ${source}/AsusSMC/AsusSMC.hpp:14:
+In file included from ${source}/AsusSMC/FXProfileBridge.hpp:4:
+${sdk_delta}/IOKit/IOUserClient.h:183:5: error: function-like macro '__attribute__' is not defined
+  183 | #if PRIVATE
+      |     ^
+${lilu}/Headers/kern_util.hpp:231:17: note: expanded from macro 'PRIVATE'
+  231 | #define PRIVATE __attribute__((visibility("hidden")))
+      |                 ^
+In file included from ${source}/AsusSMC/KeyImplementations.cpp:9:
+In file included from ${source}/AsusSMC/AsusSMC.hpp:14:
+In file included from ${source}/AsusSMC/FXProfileBridge.hpp:4:
+${sdk_delta}/IOKit/IOUserClient.h:227:5: error: function-like macro '__attribute__' is not defined
+  227 | #if PRIVATE
+      |     ^
+${lilu}/Headers/kern_util.hpp:231:17: note: expanded from macro 'PRIVATE'
+  231 | #define PRIVATE __attribute__((visibility("hidden")))
+      |                 ^
+In file included from ${source}/AsusSMC/KeyImplementations.cpp:9:
+In file included from ${source}/AsusSMC/AsusSMC.hpp:14:
+In file included from ${source}/AsusSMC/FXProfileBridge.hpp:4:
+${sdk_delta}/IOKit/IOUserClient.h:319:5: error: function-like macro '__attribute__' is not defined
+  319 | #if PRIVATE
+      |     ^
+${lilu}/Headers/kern_util.hpp:231:17: note: expanded from macro 'PRIVATE'
+  231 | #define PRIVATE __attribute__((visibility("hidden")))
+      |                 ^
+3 errors generated.

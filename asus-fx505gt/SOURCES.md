@@ -209,3 +209,14 @@ Bluetooth reference: **blueutil2.14.0**, MIT, pin
 No Bluetooth permission is accepted or privacy/security setting changed by
 these source-only build/tests. The future native app must preserve OS prompts
 and report API errors/ambiguous readbacks rather than bypass them.
+
+## Fixed build inputs and object-check provenance
+
+The exact AsusSMC/Lilu/VirtualSMC/MacKernelSDK source pins, license roles and
+build-only contract are in [build/inputs.json](build/inputs.json) and
+[BUILD_COHORT.md](BUILD_COHORT.md). The four-TU object check uses a separately
+documented reused Apple/XNU/public-SDK closure, with original Git blob URLs
+where established and SHA-only inherited generated-header labels otherwise.
+See [validation/kernel-object-compile.json](validation/kernel-object-compile.json).
+No dependency implementation, CI secrets, Apple SDK package or compiled object
+is redistributed by this build-readiness update.

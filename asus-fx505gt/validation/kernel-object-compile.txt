@@ -1,0 +1,6 @@
+${source}/AsusSMC/AsusSMC.cpp: exit=0; Mach-O 64-bit x86_64 object, flags:<|SUBSECTIONS_VIA_SYMBOLS>; bytes=81896; sha256=8fb7f453aae0e01e9b1ac017dfa1f84aaacf26c02707178f8db100f49bbcac29; no diagnostics
+${source}/AsusSMC/KeyImplementations.cpp: exit=0; Mach-O 64-bit x86_64 object, flags:<|SUBSECTIONS_VIA_SYMBOLS>; bytes=4144; sha256=d6838f49da683502da246319e6ea528dac874459efefe16b979f2b5e04a2344a; no diagnostics
+${source}/VirtualAppleKeyboard/VirtualAppleKeyboard.cpp: exit=0; Mach-O 64-bit x86_64 object, flags:<|SUBSECTIONS_VIA_SYMBOLS>; bytes=32336; sha256=2b921f714c9bcde7ab8a749d43d469123e0375fede529ca5221c310d8551e061; no diagnostics
+${source}/KernEventServer/KernEventServer.cpp: exit=0; Mach-O 64-bit x86_64 object, flags:<|SUBSECTIONS_VIA_SYMBOLS>; bytes=960; sha256=b773eddb88094e8a98249750a6e96e349ed280078b535b8ae6f5218298278e46; no diagnostics
+Dependencies: 392 exact used files
+four actual kernel translation units compiled; no link, load, native Apple SDK or hardware validation

@@ -1,0 +1,7 @@
+PASS: exact fresh pinned patch application equals all nine expanded overlay files and their hashes.
+PASS: Python/shell/plist syntax; every delivered file is UTF-8 source/text.
+PASS: fixed native source pins, exact Xcode-project transform and default-off ABI1/FnABI2/cohort checks.
+PASS: actual four-TU Mach-O compile and exact replay; 392 used inputs hashed; combined object size 119336 bytes.
+PASS: all four replayed object hashes equal the original successful object hashes.
+PASS: unchanged SSDT source equals the source that passed actual ACPICA 20250404 compilation.
+LIMIT: complete native cohort export/build, Xcode final link, Objective-C++ app/helper compilation and runtime hardware behavior remain unperformed.
