@@ -1,0 +1,186 @@
+{
+  "checked_utc": "2026-10-17T00:44:10Z",
+  "purpose": "Reference-only provenance for independently drawn macOS OSD recreation",
+  "distribution": "Downloaded copyrighted reference images remain outside app/deliverable. No ASUS software downloaded, installed, executed, extracted, or redistributed. Small public image downloads only.",
+  "sources": [
+    {
+      "id": "asus_touchpad_faq",
+      "kind": "ASUS official primary source",
+      "url": "https://www.asus.com/support/faq/1042539/",
+      "page_last_update": "2026-04-07",
+      "evidence": "The Windows 10 section explicitly associates the touchpad hotkey with the Touchpad is enabled notification. Its linked screenshot visibly shows the dark near-square OSD on an ASUS VivoBook desktop. The page names ASUS System Control Interface as a relevant driver.",
+      "limit": "VivoBook reference, not an FX505GT-specific capture; screenshot asset is from 2021."
+    },
+    {
+      "id": "asus_store_hotkeys",
+      "kind": "ASUS-published primary source on Microsoft Store",
+      "url": "https://apps.microsoft.com/detail/9pk20dg5fb6b?gl=US&hl=en-US",
+      "evidence": "The rendered listing identifies publisher ASUSTeK COMPUTER INC. and says the ASUS Keyboard Hotkeys application provides Fn feature access and OSD showing the current hotkey status.",
+      "limit": "Does not establish the executable rendering any given state or the FX505GT factory version."
+    },
+    {
+      "id": "asus_hotkey_driver_faq",
+      "kind": "ASUS official primary source",
+      "url": "https://www.asus.com/global/support/faq/1043050/",
+      "page_last_update": "2025-11-05",
+      "evidence": "ASUS distinguishes System Control Interface V2, ASUS Keyboard Hotkeys Driver (ATK Package), and legacy ATKPackage, with model-dependent use. It explicitly says hotkey drivers are integrated into System Control Interface V2 on some models.",
+      "limit": "Generic model-generation guidance, not a binary-level attribution of AsusOSD.exe or ASUSOptimization."
+    },
+    {
+      "id": "asus_fx505gt_downloads",
+      "kind": "ASUS official model-specific primary source",
+      "url": "https://www.asus.com/supportonly/fx505gt/helpdesk_download/",
+      "evidence": "The FX505GT page lists ASUS System Control Interface, Armoury Crate, MyASUS, and a Wireless radio control driver dated 2019-10-17 whose description explicitly includes airplane-mode hotkeys and OSD.",
+      "limit": "Live support page has updated components; it does not prove factory 2019 software versions, exact notification visuals, or that one program draws all Fn overlays."
+    },
+    {
+      "id": "asus_armoury_crate",
+      "kind": "ASUS official primary source",
+      "url": "https://www.asus.com/us/support/faq/1043747/",
+      "evidence": "Operating Mode and Q&A describe Armoury Crate system profiles including Silent, Performance, and Turbo; profiles change CPU/GPU performance, cooling, noise and power behavior.",
+      "limit": "Current Ver6.0 article; establishes feature ownership, not 2019 OSD renderer executable, glyph geometry, or timing. UI varies with product/application version."
+    },
+    {
+      "id": "fx505dy_owner_2020",
+      "kind": "Firsthand owner publication; not ASUS official",
+      "url": "https://dpg.danawa.com/mobile/community/view?boardSeq=28&listSeq=4164837&past=YES",
+      "author": "Nonames",
+      "publication_display": "20.02.24. 00:25:56 (page timezone not verified)",
+      "evidence": "Review identifies FX505DY-BQ009 and includes photographs of keyboard-brightness and Silent-mode OSDs in corresponding software-installation sections.",
+      "limit": "Sibling FX505DY, not FX505GT. Camera photographs have perspective, blur, and color/scale distortion. Installation opinions are owner claims, not engineering proof."
+    },
+    {
+      "id": "microsoft_hardware_flyouts",
+      "kind": "Microsoft official primary source",
+      "url": "https://blogs.windows.com/windows-insider/2022/01/12/announcing-windows-11-insider-preview-build-22533/",
+      "published": "2022-01-12",
+      "evidence": "Microsoft documents its own OS hardware indicators for brightness, volume, camera and airplane mode, with a Windows 11 redesign.",
+      "limit": "Do not conflate Windows shell flyouts with the ASUS dark square. This article alone does not establish which specific FX505GT key invokes which renderer."
+    }
+  ],
+  "images": [
+    {
+      "file": "asus_official_win10_touchpad_enabled.png",
+      "source_id": "asus_touchpad_faq",
+      "image_url": "https://kmpic.asus.com/images/2021/11/15/6f01eab1-dfca-4fc1-bcbd-107553af163c.png",
+      "asset_url_date": "2021-11-15",
+      "observed": "Translucent very dark near-square panel with subtly rounded corners, large white outlined touchpad icon, one line TouchPad is enabled, no meter. Orange frame and red numbered marker are editorial annotation, not OSD.",
+      "measured_raster": {
+        "origin": "top-left, integer source-image pixels; approximate body edges due to antialiasing/shadow",
+        "panel_body_bounds_inclusive": [
+          823,
+          604,
+          1092,
+          873
+        ],
+        "panel_body_size_approx_px": [
+          270,
+          270
+        ],
+        "shadow_fringe_approx_px": 3,
+        "corner_radius_visual_approx_px": 7,
+        "panel_center_approx_px": [
+          957.5,
+          738.5
+        ],
+        "panel_center_normalized_approx": [
+          0.4987,
+          0.6838
+        ],
+        "icon_bright_pixel_bounds_inclusive": [
+          905,
+          646,
+          1009,
+          762
+        ],
+        "icon_bright_pixel_size_px": [
+          105,
+          117
+        ],
+        "text_bright_pixel_bounds_approx_inclusive": [
+          855,
+          807,
+          1058,
+          823
+        ]
+      },
+      "measurement_method": "Pillow/NumPy inspection of the downloaded original. White icon component threshold: min RGB > 210 and channel spread < 25. Panel body/shadow/corner values are edge and visual estimates, not original UI constants.",
+      "do_not_infer": [
+        "logical/DIP dimensions",
+        "display scaling",
+        "intrinsic alpha or flat RGB background",
+        "font identity or point size",
+        "display duration or fade animation",
+        "FX505GT exact placement"
+      ],
+      "byte_size": 2038383,
+      "sha256": "15e227bbcae151035881f5e011ca3d260043a51f23c113357c5eca8266a4ce5e",
+      "raster_size": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "file": "fx505dy_2020_keyboard_owner.jpeg",
+      "source_id": "fx505dy_owner_2020",
+      "image_url": "https://img.danawa.com/images/descFiles/5/165/4164837_1582467790303.jpeg",
+      "observed": "White keyboard-with-sun glyph, Korean caption 밝기 증가 (brightness increase), thin continuous bottom meter, translucent dark near-square panel with tiny rounding.",
+      "limit": "Photograph only: no valid absolute UI-pixel measurements or transparency/color inference.",
+      "byte_size": 450823,
+      "sha256": "58a8d78b0cacbf65f9274897012a96af5a279e9d762fdf73c15e2dc1c9e7f901",
+      "raster_size": [
+        1280,
+        960
+      ]
+    },
+    {
+      "file": "fx505dy_2020_fan_owner.jpeg",
+      "source_id": "fx505dy_owner_2020",
+      "image_url": "https://img.danawa.com/images/descFiles/5/165/4164837_1582468353742.jpeg",
+      "observed": "Large white angular feather/leaf-like Silent glyph above the English word Silent; translucent dark near-square panel, tiny rounding, no meter.",
+      "limit": "Photograph only: no valid absolute UI-pixel measurements or transparency/color inference.",
+      "byte_size": 268840,
+      "sha256": "1d241ae0cfa98ddc98d030537e207bf2f2bf8a7c653c5cab68412672a1b57321",
+      "raster_size": [
+        1280,
+        960
+      ]
+    },
+    {
+      "file": "touchpad_osd_crop.png",
+      "source_id": "asus_touchpad_faq",
+      "derived_from": "asus_official_win10_touchpad_enabled.png",
+      "crop_box_pillow": [
+        795,
+        570,
+        1120,
+        900
+      ],
+      "observed": "Convenience crop for local visual review; not a clean distributable asset.",
+      "byte_size": 35730,
+      "sha256": "fb7b3f37bb195aea65832db9776a9a8cc8d5dced62e8982acc122b4c0291607d",
+      "raster_size": [
+        325,
+        330
+      ]
+    }
+  ],
+  "conclusions": {
+    "direct_evidence": [
+      "ASUS officially offers a hotkey-status OSD application and model-dependent hotkey driver stacks.",
+      "Armoury Crate owns gaming operating profiles such as Silent/Performance/Turbo.",
+      "ASUS official screenshot and 2020 FX505DY owner photographs corroborate the dark near-square visual family."
+    ],
+    "inference": [
+      "A recreated ASUS family OSD can reasonably use dark translucent square, tiny rounding, white icon and short caption.",
+      "Profile state semantics and notification drawing should be distinguished; these pages do not identify one universal rendering process."
+    ],
+    "not_verified": [
+      "Any exact FX505GT factory OSD screenshot or video frame",
+      "Exact FX505GT glyph set, panel dimensions, location, opacity, font, duration or fade curve",
+      "Touchpad-disabled state pixels",
+      "Performance/Turbo glyph pixels",
+      "ASUSOptimization / AsusOSD.exe ownership from official sources"
+    ]
+  }
+}

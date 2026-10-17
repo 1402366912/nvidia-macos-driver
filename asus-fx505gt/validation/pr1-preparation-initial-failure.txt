@@ -1,0 +1,9 @@
+PASS: Git pin, clean input, selected verified blob export, CI/installer exclusion and symlink rejection
+PASS: exact upstream project hash; archive/installer/daemon target edges removed; source target retained
+Prepared project SHA256: bb6a4c9f63e213d09e019712dbaac45a296b32345ae1bab3f1d6b95a17f1a897
+Traceback (most recent call last):
+  File "/workspace/shared/pr1-merge-review/repo/asus-fx505gt/tests/build_preparation_test.py", line 70, in <module>
+    m.apply_overlay(dest)
+  File "/workspace/shared/pr1-merge-review/repo/asus-fx505gt/tools/build_cohort.py", line 170, in apply_overlay
+    raise ValueError('Manifest ABI value mismatch: ' + macro)
+ValueError: Manifest ABI value mismatch: FX_FN_ABI_VERSION

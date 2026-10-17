@@ -58,14 +58,14 @@ The bklt route controls backlight intensity, not an electrical panel power rail.
 parameter after handler acceptance, not measured physical panel power. BIOS303
 BLCT/SPBI/GPBL are not used as a hardware control/readback interface.
 
-F11 uses real IOPMSleepSystem. Enabling the saved Fn shortcuts preference grants
+F11 delegates to the existing platform app, which uses real IOPMSleepSystem. Enabling the saved Fn shortcuts preference grants
 explicit permission for genuine queued Fn events, so a physical FnF11 does not
 show a redundant per-press dialog. The manual menu action still confirms.
 Queued events are checked against their dedicated code/action mapping. No
 power action runs at startup or merely because the listener is enabled.
 
 F12 is labeled **Wi-Fi + Bluetooth control**, not universal RF silence. The
-Bluetooth companion is separately off by default each launch. Its enable
+Bluetooth companion starts off unless the user has saved its explicit opt-in. Its enable
 confirmation explains private-API compatibility, possible native Bluetooth
 permission prompts and connection loss. Denial/timeout/unknown state disables
 it. The helper cannot pair, scan, list devices, accept arbitrary commands or
@@ -86,7 +86,7 @@ identity/state changes cancel before writes where possible. Partial failure
 is explicitly mixed/unknown, with no rollback, fallback or automatic retry.
 Other radios/WWAN and physical RF output are outside these reported states.
 
-The companion's fixed app-bundle path and every ancestor must be real,
+The companion's fixed /Library/PrivilegedHelperTools/org.fx505gt.fxradio path and every ancestor must be real,
 root/current-user-owned and non-group/world-writable, with no ACL allow entry.
 The final file must be executable, regular, single-link, non-setuid/non-setgid
 and match the build-embedded SHA-256. Hashing is size-bounded and followed by
@@ -162,3 +162,15 @@ application, sharing its manual-sleep policy. The two independent settings are
 “合盖保持运行” (AsusSMC clamshell selector4, no global disablesleep change)
 and “一直保持运行” (global SleepDisabled). Manual sleep releases the latter
 until wake. See platform/README.md and the field report.
+
+## On-screen Fn feedback (source v5)
+
+See [OSD_REFERENCE.md](../OSD_REFERENCE.md) for the inspected ASUS Windows visual
+references and exact-match limits. `FXFeedback.mm` is a native AppKit nonactivating
+panel, not a web mockup. It uses original vector artwork, optional per-category
+OSD settings, a lower-center ASUS-family reference position or exact-center menu
+option, state-qualified captions, and cancellation-safe timers. Physical-key
+feedback requires the existing Fn listener; the OSD switch alone cannot enable
+hardware actions. Volume/brightness/keyboard-light custom overlays default off
+to avoid duplicating macOS. Native SDK build, rendering and runtime QA remain
+pending. No proprietary assets or Windows components are bundled.

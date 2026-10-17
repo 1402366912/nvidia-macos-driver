@@ -4,13 +4,14 @@
 #include "FXFnPolicy.hpp"
 #include <unistd.h>
 #include "FXBuildIdentity.h"
+#import "FXFeedback.h"
 extern NSString *const FXHelperPath;
 extern bool FXHelperTrusted(NSString **reason);
 extern bool FXIsConsoleUser();
 extern uint64_t FXSessionGeneration();
 extern void FXInvalidateSessionActions();
 extern bool FXMicrophoneSupported();
-extern NSString *FXPerformSessionAction(uint32_t action,bool physicalEvent);
+extern NSString *FXPerformSessionAction(uint32_t action,bool physicalEvent,fx::Feedback *feedback);
 extern bool FXPanelPowerSupported();
 extern bool FXReadItlwmPower(int &power);
 extern bool FXBluetoothEnabled();
@@ -33,12 +34,14 @@ static NSString *state(uint32_t s) {
     FXProfileSnapshot _snapshot;
     FXSessionBatch _lastEvents;
     NSStatusItem *_item;
-    NSPanel *_microphoneHUD;
-    NSTimer *_microphoneHUDTimer;
+    FXFeedbackController *_feedback;
+    fx::FeedbackCursor _feedbackCursor;
+    uint64_t _feedbackSerial;
+    BOOL _feedbackEnabled, _audioFeedback, _brightnessFeedback, _keyboardFeedback;
     NSTimer *_timer;
     NSString *_status, *_helperReason;
     BOOL _valid, _trusted, _listening, _claimed, _busy;
-    NSTimeInterval _lastQuery;
+    NSTimeInterval _lastQuery, _lastFeedbackPoll;
 }
 @end
 @implementation FXMenu
@@ -50,6 +53,7 @@ static NSString *state(uint32_t s) {
     _listening=[NSUserDefaults.standardUserDefaults boolForKey:@"HardwareFnEnabled"];
     FXEnableBluetooth([NSUserDefaults.standardUserDefaults boolForKey:@"BluetoothCompanionEnabled"]);
     _status=@"Fn controls ready; individual hardware capabilities are shown below.";
+    _feedback=[FXFeedbackController new]; _feedbackEnabled=YES;
     _item=[[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength]; _item.button.title=@"FX505GT";
     _item.menu=[NSMenu new]; _item.menu.delegate=self;
     [[[NSWorkspace sharedWorkspace] notificationCenter] addObserver:self selector:@selector(sessionInactive:) name:NSWorkspaceSessionDidResignActiveNotification object:nil];
@@ -58,59 +62,81 @@ static NSString *state(uint32_t s) {
     _timer=[NSTimer scheduledTimerWithTimeInterval:0.25 target:self selector:@selector(tick:) userInfo:nil repeats:YES];
 }
 - (void)applicationWillTerminate:(NSNotification *)notification {
-    (void)notification; [_timer invalidate]; (void)_client.claim(false); _client.close();
+    (void)notification; [_feedback dismiss]; ++_feedbackSerial; [_timer invalidate]; (void)_client.claim(false); _client.close();
     [[[NSWorkspace sharedWorkspace] notificationCenter] removeObserver:self];
 }
 - (void)sessionInactive:(NSNotification *)notification {
-    (void)notification; FXInvalidateSessionActions(); (void)_client.claim(false); _claimed=NO;
+    (void)notification; [_feedback dismiss]; ++_feedbackSerial; _feedbackCursor.reset(); FXInvalidateSessionActions(); (void)_client.claim(false); _claimed=NO;
 }
 - (void)refresh {
     IOReturn result=_client.query(_snapshot); _valid=result==kIOReturnSuccess;
-    if(!_valid) { _status=[NSString stringWithFormat:@"Bridge query unavailable: 0x%x",result]; _client.close(); _claimed=NO; }
+    if(!_valid) { _status=[NSString stringWithFormat:@"Bridge query unavailable: 0x%x",result]; _client.close(); _claimed=NO; _feedbackCursor.reset(); ++_feedbackSerial; [_feedback dismiss]; }
     _lastQuery=NSProcessInfo.processInfo.systemUptime;
 }
 - (void)tick:(NSTimer *)timer {
     (void)timer; if(_busy) return;
+    const NSTimeInterval pollNow=NSProcessInfo.processInfo.systemUptime;
+    if(pollNow-_lastFeedbackPoll>0.5) { _feedbackCursor.reset(); ++_feedbackSerial; }
+    _lastFeedbackPoll=pollNow;
     if(NSProcessInfo.processInfo.systemUptime-_lastQuery>5) [self refresh];
-    if(!_listening || !FXIsConsoleUser()) { if(_claimed) (void)_client.claim(false); _claimed=NO; return; }
+    if(!FXIsConsoleUser()) { if(_claimed) (void)_client.claim(false); _claimed=NO; _feedbackCursor.reset(); ++_feedbackSerial; [_feedback dismiss]; return; }
+    if(!_listening) { if(_claimed) (void)_client.claim(false); _claimed=NO; return; }
     if(!_claimed) {
+        _feedbackCursor.reset();
         const IOReturn result=_client.claim(true); _claimed=result==kIOReturnSuccess;
         if(!_claimed) { _status=[NSString stringWithFormat:@"Fn claim unavailable: 0x%x",result]; return; }
         NSLog(@"FN_CLAIM active abi=%u",FX_FN_ABI_VERSION);
     }
     FXSessionBatch events {}; IOReturn result=_client.events(events);
-    if(result!=kIOReturnSuccess) { _claimed=NO; _status=[NSString stringWithFormat:@"Fn consumer unavailable: 0x%x",result]; return; }
+    if(result!=kIOReturnSuccess) { _claimed=NO; _feedbackCursor.reset(); ++_feedbackSerial; [_feedback dismiss]; _status=[NSString stringWithFormat:@"Fn consumer unavailable: 0x%x",result]; return; }
     if(events.enabled!=_lastEvents.enabled || events.observedCount!=_lastEvents.observedCount)
         NSLog(@"FN_STATUS enabled=%u observed=%u last=0x%x queued=%u",events.enabled,events.observedCount,events.lastObservedCode,events.count);
+    if(NSProcessInfo.processInfo.systemUptime-pollNow>0.5) { _feedbackCursor.reset(); ++_feedbackSerial; }
     _lastEvents=events;
-    // Drain ordered brightness repeats; at most one power/radio/session action.
-    bool sessionHandled=false;
+    const bool observed=_feedbackCursor.consume(events.observedCount,events.lastObservedCode,events.enabled && _feedbackEnabled);
+    // HID events are only observed, never re-injected. Wait briefly for the OS to
+    // process the existing kernel event, then READ its current state. A newer
+    // event/session cancels this read/display; held keys coalesce to the latest.
+    if(observed) {
+        const uint64_t serial=++_feedbackSerial,generation=FXSessionGeneration();
+        const uint32_t code=events.lastObservedCode;
+        const NSTimeInterval observedAt=pollNow;
+        if(![self feedbackAllowed:code]) { [_feedback dismiss]; }
+        else if(!fx::fnRoute(code).action) {
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW,80*NSEC_PER_MSEC),dispatch_get_main_queue(),^{
+                if(self->_busy || NSProcessInfo.processInfo.systemUptime-observedAt>0.5 || serial!=self->_feedbackSerial || generation!=FXSessionGeneration() || !self->_claimed || ![self feedbackAllowed:code] || !FXIsConsoleUser()) return;
+                if(code==FX_FN_EVENT_BASE+5) [self refresh];
+                if(serial!=self->_feedbackSerial || !self->_claimed || generation!=FXSessionGeneration() || !FXIsConsoleUser() || NSProcessInfo.processInfo.systemUptime-observedAt>0.5) return;
+                [self->_feedback observeCode:code profile:self->_valid?&self->_snapshot:nullptr deadline:observedAt+0.5];
+            });
+        }
+    }
+    // Consume once before dispatch, with no requeue on failure/cancel. ABI 3
+    // drains ordered brightness repeats and at most one power/radio/session action.
+    const uint64_t batchGeneration=FXSessionGeneration();
+    bool sessionHandled=false, brightnessFeedback=false;
+    uint32_t actionFeedbackCode=0; fx::Feedback actionFeedback;
     for(uint32_t i=0;i<events.count;++i) {
+        if(batchGeneration!=FXSessionGeneration() || !FXIsConsoleUser()) break;
         const auto &event=events.events[i]; const auto route=fx::fnRoute(event.acpiCode);
         if(!events.enabled || !route.recognized || route.action!=event.action || !route.action) continue;
         const bool brightness=event.action==FXBrightnessDown || event.action==FXBrightnessUp;
         if(!brightness && sessionHandled) continue;
-        _busy=YES; _status=FXPerformSessionAction(event.action,true); _busy=NO;
+        _busy=YES; const uint64_t generation=FXSessionGeneration(); fx::Feedback feedback;
+        _status=FXPerformSessionAction(event.action,true,&feedback); _busy=NO;
         NSLog(@"FN_ACTION code=0x%x result=%@",event.acpiCode,_status);
-        if(event.action==FXMicrophoneMute) [self showMicrophoneResult:_status];
+        if([self feedbackAllowed:event.acpiCode] && events.lastObservedCode==event.acpiCode && generation==FXSessionGeneration() && FXIsConsoleUser()) {
+            actionFeedbackCode=event.acpiCode; actionFeedback=feedback; brightnessFeedback=brightness;
+        }
         if(!brightness) sessionHandled=true;
     }
-}
-- (void)showMicrophoneResult:(NSString *)result {
-    BOOL muted=[result containsString:@"reports muted"], unmuted=[result containsString:@"reports unmuted"];
-    if(!muted && !unmuted) return;
-    if(!_microphoneHUD) {
-        _microphoneHUD=[[NSPanel alloc] initWithContentRect:NSMakeRect(0,0,160,100) styleMask:NSWindowStyleMaskBorderless|NSWindowStyleMaskNonactivatingPanel backing:NSBackingStoreBuffered defer:NO];
-        _microphoneHUD.opaque=NO; _microphoneHUD.backgroundColor=NSColor.clearColor; _microphoneHUD.hasShadow=YES; _microphoneHUD.ignoresMouseEvents=YES;
-        _microphoneHUD.level=NSStatusWindowLevel; _microphoneHUD.collectionBehavior=NSWindowCollectionBehaviorCanJoinAllSpaces|NSWindowCollectionBehaviorFullScreenAuxiliary;
-        NSVisualEffectView *view=[[NSVisualEffectView alloc] initWithFrame:NSMakeRect(0,0,160,100)]; view.material=NSVisualEffectMaterialHUDWindow;view.state=NSVisualEffectStateActive;view.wantsLayer=YES;view.layer.cornerRadius=18;view.layer.masksToBounds=YES;_microphoneHUD.contentView=view;
-        NSImageView *icon=[[NSImageView alloc] initWithFrame:NSMakeRect(60,42,40,40)];icon.tag=1;[view addSubview:icon];
-        NSTextField *text=[NSTextField labelWithString:@""];text.frame=NSMakeRect(5,14,150,22);text.alignment=NSTextAlignmentCenter;text.font=[NSFont systemFontOfSize:13 weight:NSFontWeightMedium];text.tag=2;[view addSubview:text];
+    // Render once after the ordered drain. Brightness comes from the existing
+    // read-only driver query, never from a requested step or a status string.
+    if(actionFeedbackCode && batchGeneration==FXSessionGeneration() && _claimed && [self feedbackAllowed:actionFeedbackCode] && FXIsConsoleUser()) {
+        ++_feedbackSerial;
+        if(brightnessFeedback) [_feedback observeCode:actionFeedbackCode profile:nullptr deadline:pollNow+0.5];
+        else [_feedback showCode:actionFeedbackCode feedback:actionFeedback detail:nil];
     }
-    if(@available(macOS 11.0,*)) ((NSImageView *)[_microphoneHUD.contentView viewWithTag:1]).image=[NSImage imageWithSystemSymbolName:muted?@"mic.slash.fill":@"mic.fill" accessibilityDescription:nil];
-    ((NSTextField *)[_microphoneHUD.contentView viewWithTag:2]).stringValue=muted?@"麦克风已静音":@"麦克风已恢复";
-    NSRect screen=NSScreen.mainScreen.visibleFrame;[_microphoneHUD setFrameOrigin:NSMakePoint(NSMidX(screen)-80,NSMinY(screen)+80)];[_microphoneHUD orderFrontRegardless];
-    [_microphoneHUDTimer invalidate];NSPanel *panel=_microphoneHUD;_microphoneHUDTimer=[NSTimer scheduledTimerWithTimeInterval:1.2 repeats:NO block:^(NSTimer *timer){(void)timer;[panel orderOut:nil];}];
 }
 - (BOOL)helperTrusted {
     NSString *reason=nil; BOOL trusted=FXHelperTrusted(&reason);
@@ -142,6 +168,16 @@ static NSString *state(uint32_t s) {
     [self add:@"Open Bluetooth settings" action:@selector(bluetooth:) tag:0 enabled:YES];
     NSMenuItem *listen=[self add:@"Enable Fn shortcuts" action:@selector(toggleListening:) tag:0 enabled:!_busy];
     listen.state=_listening?NSControlStateValueOn:NSControlStateValueOff;
+    NSMenuItem *osd=[self add:@"Fn OSD (requires Fn session listener)" action:@selector(toggleFeedback:) tag:0 enabled:YES];
+    osd.state=_feedbackEnabled?NSControlStateValueOn:NSControlStateValueOff;
+    NSMenuItem *position=[self add:@"Place OSD at exact screen center" action:@selector(toggleFeedbackPosition:) tag:0 enabled:_feedbackEnabled];
+    position.state=_feedback.screenCentered?NSControlStateValueOn:NSControlStateValueOff;
+    NSMenuItem *audio=[self add:@"Custom volume OSD (may duplicate macOS)" action:@selector(toggleFeedbackCategory:) tag:1 enabled:_feedbackEnabled];
+    audio.state=_audioFeedback?NSControlStateValueOn:NSControlStateValueOff;
+    NSMenuItem *brightness=[self add:@"Custom brightness OSD (may duplicate macOS)" action:@selector(toggleFeedbackCategory:) tag:2 enabled:_feedbackEnabled];
+    brightness.state=_brightnessFeedback?NSControlStateValueOn:NSControlStateValueOff;
+    NSMenuItem *keyboard=[self add:@"Custom keyboard-light OSD (may duplicate macOS)" action:@selector(toggleFeedbackCategory:) tag:3 enabled:_feedbackEnabled];
+    keyboard.state=_keyboardFeedback?NSControlStateValueOn:NSControlStateValueOff;
     [self add:_claimed?@"Fn consumer: exclusive console claim active":@"Fn consumer: inactive; no queued action replay" action:nullptr tag:0 enabled:NO];
     [menu addItem:NSMenuItem.separatorItem];
     [self add:_status action:nullptr tag:0 enabled:NO];
@@ -150,6 +186,7 @@ static NSString *state(uint32_t s) {
 }
 - (void)setProfile:(NSMenuItem *)sender {
     if(_busy || sender.tag<0 || sender.tag>2 || !FXIsConsoleUser()) return;
+    ++_feedbackSerial; [_feedback dismiss];
     [self refresh];
     if(!_valid || _snapshot.state!=FXReady || !(_snapshot.supportedProfiles&(1u<<sender.tag))) return;
     if(![self helperTrusted]) { _status=_helperReason; return; }
@@ -176,17 +213,45 @@ static NSString *state(uint32_t s) {
     _busy=NO; [self refresh];
 }
 - (void)sessionAction:(NSMenuItem *)sender {
-    if(_busy) return; _busy=YES; _status=FXPerformSessionAction((uint32_t)sender.tag,false); _busy=NO;
+    if(_busy) return; ++_feedbackSerial; [_feedback dismiss]; _busy=YES; const uint64_t generation=FXSessionGeneration(); fx::Feedback feedback;
+    _status=FXPerformSessionAction((uint32_t)sender.tag,false,&feedback); _busy=NO;
+    uint32_t key=sender.tag==FXMicrophoneMute?4:(sender.tag==FXPanelPowerToggle?6:(sender.tag==FXSystemSleep?11:12));
+    if(_feedbackEnabled && generation==FXSessionGeneration() && FXIsConsoleUser()) [_feedback showCode:FX_FN_EVENT_BASE+key feedback:feedback detail:nil];
+}
+- (void)toggleFeedbackPosition:(id)sender {
+    (void)sender; _feedback.screenCentered=!_feedback.screenCentered; ++_feedbackSerial; [_feedback dismiss];
+}
+- (BOOL)feedbackAllowed:(uint32_t)code {
+    if(!_feedbackEnabled) return NO;
+    const uint32_t key=code-FX_FN_EVENT_BASE;
+    if(key>=1 && key<=3) return _audioFeedback;
+    if(key==7 || key==8) return _brightnessFeedback;
+    if(key==13 || key==14) return _keyboardFeedback;
+    return fx::feedbackCode(code);
+}
+- (void)toggleFeedbackCategory:(NSMenuItem *)sender {
+    switch(sender.tag) {
+        case 1:_audioFeedback=!_audioFeedback; break;
+        case 2:_brightnessFeedback=!_brightnessFeedback; break;
+        case 3:_keyboardFeedback=!_keyboardFeedback; break;
+        default:return;
+    }
+    ++_feedbackSerial; _feedbackCursor.reset(); [_feedback dismiss];
+}
+- (void)toggleFeedback:(id)sender {
+    (void)sender; _feedbackEnabled=!_feedbackEnabled; ++_feedbackSerial;
+    _feedbackCursor.reset(); [_feedback dismiss];
 }
 - (void)toggleListening:(id)sender {
     (void)sender; if(_busy) return;
-    _listening=!_listening;
+    _listening=!_listening; ++_feedbackSerial; _feedbackCursor.reset(); [_feedback dismiss];
     [NSUserDefaults.standardUserDefaults setBool:_listening forKey:@"HardwareFnEnabled"];
     if(!_listening) { FXInvalidateSessionActions(); (void)_client.claim(false); _claimed=NO; }
     _status=_listening?@"Fn shortcuts enabled; preference saved.":@"Fn shortcuts disabled; preference saved.";
 }
 - (void)toggleBluetooth:(id)sender {
     (void)sender; if(_busy) return;
+    ++_feedbackSerial; [_feedback dismiss];
     if(FXBluetoothEnabled()) { FXEnableBluetooth(false); [NSUserDefaults.standardUserDefaults setBool:NO forKey:@"BluetoothCompanionEnabled"]; FXInvalidateSessionActions(); _status=@"Bluetooth companion disabled; no radio state changed."; return; }
     NSAlert *a=[NSAlert new]; a.messageText=@"Enable Bluetooth control?";
     a.informativeText=@"The source-built, hash-pinned companion uses the private power API documented by blueutil. macOS may ask for Bluetooth permission; you can deny it. No privacy setting is bypassed. Controller/OS compatibility is unverified. F12 can disconnect Wi-Fi and Bluetooth devices when the Fn listener is enabled.";

@@ -1,0 +1,5 @@
+PASS: Git pin, clean input, selected verified blob export, CI/installer exclusion and symlink rejection
+PASS: exact upstream project hash; archive/installer/daemon target edges removed; source target retained
+Prepared project SHA256: bb6a4c9f63e213d09e019712dbaac45a296b32345ae1bab3f1d6b95a17f1a897
+PASS: exact expanded overlay, shared ABI1/FnABI3/cohort check, all new enable flags remain false
+No native compiler, build output or hardware operation was invoked.

@@ -35,8 +35,8 @@ xcrun --sdk macosx clang++ -arch x86_64 -std=c++14 -fobjc-arc -Wall -Wextra -Wer
   -Wno-deprecated-declarations -mmacosx-version-min=10.15 \
   -I"$base/include" -I"$base/app" -I"$out" \
   "$base/app/main.mm" "$base/app/FXHelperTrust.mm" "$base/app/FXSessionActions.mm" \
-  "$base/app/FXPanelPower.mm" "$base/app/FXBluetooth.mm" \
-  -framework AppKit -framework IOKit -framework CoreFoundation -framework CoreAudio \
+  "$base/app/FXPanelPower.mm" "$base/app/FXBluetooth.mm" "$base/app/FXFeedback.mm" \
+  -framework AppKit -framework CoreGraphics -framework IOKit -framework CoreFoundation -framework CoreAudio \
   -framework CoreWLAN -framework SystemConfiguration -o "$app/Contents/MacOS/FX505GTControl"
 cp "$base/app/Info.plist" "$app/Contents/Info.plist"
 printf 'Built source preview in %s. Nothing installed or executed.\n' "$out"

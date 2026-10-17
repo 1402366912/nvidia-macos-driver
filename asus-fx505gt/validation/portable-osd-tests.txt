@@ -1,0 +1,7 @@
+PASS: 14 dedicated Fn routes, conflicting raw codes excluded, bounded queue, debounce, stale-drop, no replay
+PASS: portable policy assertions (capabilities, errors, one backend, unknown state, Fn cycle/debounce, stop)
+PASS: root-only nonwritable real helper nodes; no symlink/setuid/hardlink; Darwin ACL semantics fail closed
+PASS: exact internal-panel power range, bounded toggle, strict Bluetooth readback and dual-radio target policy
+PASS: feedback range/readback defaults, all 14 keys, baseline, stale/repeat/coalesced, reset, disabled, wrap
+PASS: shared C ABI size and offsets
+PASS: host CLI parser and explicit non-macOS failure (no device access)

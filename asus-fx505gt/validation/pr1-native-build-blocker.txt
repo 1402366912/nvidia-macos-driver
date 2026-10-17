@@ -1,0 +1,1 @@
+Native app build requires macOS and the Apple SDK.

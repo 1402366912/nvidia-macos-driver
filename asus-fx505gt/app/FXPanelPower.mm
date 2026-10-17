@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+#include "FXFeedbackPolicy.hpp"
 #import <Foundation/Foundation.h>
 #include <IOKit/IOKitLib.h>
 #include <IOKit/graphics/IOGraphicsLib.h>
@@ -44,7 +45,7 @@ bool FXPanelPowerSupported() {
     io_service_t panel=uniquePanel(); if(!panel) return false;
     CFStringRef parameter=nullptr; SInt32 state=-1,maximum=0; bool valid=readPanel(panel,parameter,state,maximum); IOObjectRelease(panel); return valid;
 }
-NSString *FXTogglePanelPower() {
+NSString *FXTogglePanelPower(fx::Feedback *feedback) {
     if(!FXIsConsoleUser()) return @"Panel request refused: inactive console user.";
     const uint64_t generation=FXSessionGeneration();
     io_service_t panel=uniquePanel();
@@ -56,7 +57,7 @@ NSString *FXTogglePanelPower() {
     const bool restoring=before==0 && savedPanel==identity && savedParameter && CFEqual(savedParameter,parameter) && savedPower>0 && savedPower<=maximum;
     const SInt32 target=before>0?0:(restoring?savedPower:maximum);
     // Fixed documented parameter only. No direct ACPI, EC or framebuffer call.
-    if(generation!=FXSessionGeneration() || !FXIsConsoleUser()) { IOObjectRelease(panel); FXForgetPanelPower(); return @"Panel request cancelled after session change."; }
+    if(generation!=FXSessionGeneration() || !FXIsConsoleUser()) { IOObjectRelease(panel); FXForgetPanelPower(); if(feedback) feedback->state=fx::FeedbackState::Cancelled; return @"Panel request cancelled after session change."; }
     IOReturn result=IODisplaySetIntegerParameter(panel,0,parameter,target);
     CFStringRef afterParameter=nullptr; SInt32 actual=-1,afterMax=0; bool matched=readPanel(panel,afterParameter,actual,afterMax) && CFEqual(afterParameter,parameter) && actual==target;
     io_service_t current=uniquePanel();
@@ -65,6 +66,7 @@ NSString *FXTogglePanelPower() {
     if(result!=kIOReturnSuccess || !matched || !same) { FXForgetPanelPower();
         return @"Internal-panel power request failed, changed identity, or driver readback differed; current panel power is unknown."; }
     if(target==0) { savedPanel=identity; savedPower=before; savedParameter=parameter; } else FXForgetPanelPower();
+    if(feedback) { feedback->state=fx::FeedbackState::Readback; feedback->on=target!=0; }
     const bool backlight=CFEqual(parameter,CFSTR("bklt"));
     return [NSString stringWithFormat:@"Internal-panel %@ reports %@; external displays unchanged.",backlight?@"backlight":@"power parameter",target==0?@"Off":@"restored/On"];
 }

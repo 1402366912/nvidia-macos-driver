@@ -1,4 +1,4 @@
-# FX505GT macOS profiles and all documented Fn keys: source preview v4
+# FX505GT macOS profiles and all documented Fn keys: source preview v5 (OSD)
 
 Status: source WIP. Includes native AppKit menu-bar app source, CLI, a bounded
 AsusSMC backend, and a complete source-backed Fn matrix. Native component builds and a loaded profile bridge are now recorded in
@@ -15,6 +15,18 @@ The repository delivers source; bounded native build/deployment results are reco
 in the field report above. No kext, app binary,
 installation, loading, signing change, reboot, or firmware write is delivered
 or performed by the portable test command.
+
+## Fn on-screen feedback (source v5)
+
+A real nonactivating AppKit OSD is integrated with the existing Fn actions.
+It uses original vector artwork informed by inspected ASUS-family Windows
+screenshots, and separates OS/driver readback from unconfirmed results.
+This is **not a verified pixel-exact FX505GT replica**; native build/render and
+exact model/version reference remain pending. See [OSD_REFERENCE.md](OSD_REFERENCE.md)
+for actual sources, measured versus provisional choices, all 14 state mappings,
+per-category duplicate-HUD controls and test limits. No hardware route or ABI is
+changed; custom audio/brightness/keyboard-light OSDs default off to preserve the
+native macOS HUD without duplication.
 
 ## What it implements
 

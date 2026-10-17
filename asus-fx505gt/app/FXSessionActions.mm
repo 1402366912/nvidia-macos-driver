@@ -7,9 +7,10 @@
 #include <unistd.h>
 #include "FXFnABI.h"
 #include "FXSessionPolicy.hpp"
+#include "FXFeedbackPolicy.hpp"
 extern bool FXPanelPowerSupported();
 extern void FXForgetPanelPower();
-extern NSString *FXTogglePanelPower();
+extern NSString *FXTogglePanelPower(fx::Feedback *feedback);
 extern NSString *FXAdjustPanelBrightness(int direction);
 extern bool FXBluetoothEnabled();
 extern bool FXReadBluetooth(int &power);
@@ -67,7 +68,8 @@ static bool confirm(NSString *title, NSString *detail) {
     [alert addButtonWithTitle:@"Continue"]; [alert addButtonWithTitle:@"Cancel"];
     return [alert runModal]==NSAlertFirstButtonReturn;
 }
-NSString *FXPerformSessionAction(uint32_t action,bool physicalEvent) {
+NSString *FXPerformSessionAction(uint32_t action,bool physicalEvent,fx::Feedback *feedback) {
+    if(feedback) *feedback=fx::Feedback{};
     if(!FXIsConsoleUser()) return @"Action refused: this is not the active console user.";
     const uint64_t generation=FXSessionGeneration();
     switch(action) {
@@ -83,32 +85,34 @@ NSString *FXPerformSessionAction(uint32_t action,bool physicalEvent) {
             AudioDeviceID currentDevice; UInt32 currentMute;
             if(!inputMute(currentDevice,currentMute) || currentDevice!=device || currentMute!=wanted)
                 return @"Default input changed or its mute became unavailable; current default-input mute is unknown.";
+            if(feedback) { feedback->state=fx::FeedbackState::Readback; feedback->on=wanted; }
             return wanted ? @"Default input device reports muted. This does not cover other recording devices." : @"Default input device reports unmuted.";
         }
-        case FXPanelPowerToggle: return FXTogglePanelPower();
+        case FXPanelPowerToggle: return FXTogglePanelPower(feedback);
         case FXBrightnessDown: return FXAdjustPanelBrightness(-1);
         case FXBrightnessUp: return FXAdjustPanelBrightness(1);
         case FXSystemSleep: {
-            if(!physicalEvent && !confirm(@"Put this Mac to sleep?",@"This sends a real system-sleep request, not only an on-screen icon.")) return @"Sleep cancelled.";
-            if(generation!=FXSessionGeneration() || !FXIsConsoleUser()) return @"Sleep cancelled after session change.";
+            if(!physicalEvent && !confirm(@"Put this Mac to sleep?",@"This sends a real system-sleep request, not only an on-screen icon.")) { if(feedback) feedback->state=fx::FeedbackState::Cancelled; return @"Sleep cancelled."; }
+            if(generation!=FXSessionGeneration() || !FXIsConsoleUser()) { if(feedback) feedback->state=fx::FeedbackState::Cancelled; return @"Sleep cancelled after session change."; }
             if(![NSRunningApplication runningApplicationsWithBundleIdentifier:@"local.asus.platform.ui"].count)
                 return @"Open 华硕控制 first; it owns the unified sleep/lid policy.";
             [[NSDistributedNotificationCenter defaultCenter] postNotificationName:@"org.fx505gt.sleep-request" object:nil userInfo:nil deliverImmediately:YES];
             return @"Sleep requested through 华硕控制; its existing lid policy will be restored after wake.";
         }
         case FXRadiosToggle: {
-            if(!FXBluetoothEnabled()) return @"Radio control is disabled. Enable Bluetooth control first.";
+            if(!FXBluetoothEnabled()) { if(feedback) feedback->state=fx::FeedbackState::Disabled; return @"Radio control is disabled. Enable Bluetooth control first."; }
             NSArray<CWInterface *> *interfaces=[[CWWiFiClient sharedWiFiClient] interfaces];
             if(!interfaces.count) {
                 int wifi=-1, bluetooth=-1;
                 if(!FXReadItlwmPower(wifi)) return @"Neither CoreWLAN nor the itlwm POWER interface is available. No radio changed.";
                 if(!FXReadBluetooth(bluetooth)) return @"Bluetooth power unavailable. No radio changed.";
                 const int target=fx::nextRadioPower(wifi!=0,bluetooth);
-                if(!physicalEvent && !confirm(target?@"Turn Wi-Fi and Bluetooth on?":@"Turn Wi-Fi and Bluetooth off?",@"Uses itlwm/HeliPort power control and the default Bluetooth controller. Network connections may disconnect.")) return @"Radio request cancelled.";
-                if(generation!=FXSessionGeneration() || !FXIsConsoleUser()) return @"Radio request cancelled after session change.";
+                if(!physicalEvent && !confirm(target?@"Turn Wi-Fi and Bluetooth on?":@"Turn Wi-Fi and Bluetooth off?",@"Uses itlwm/HeliPort power control and the default Bluetooth controller. Network connections may disconnect.")) { if(feedback) feedback->state=fx::FeedbackState::Cancelled; return @"Radio request cancelled."; }
+                if(generation!=FXSessionGeneration() || !FXIsConsoleUser()) { if(feedback) feedback->state=fx::FeedbackState::Cancelled; return @"Radio request cancelled after session change."; }
                 if(bluetooth!=target && !FXWriteBluetooth(target)) return @"Bluetooth request failed; Wi-Fi unchanged.";
                 if(wifi!=target && itlPower(target,wifi)!=kIOReturnSuccess) return @"Partial result: itlwm Wi-Fi request failed or readback differed.";
                 if(!FXReadBluetooth(bluetooth) || bluetooth!=target || !FXReadItlwmPower(wifi) || wifi!=target) return @"Radio readback differs; current states are unverified.";
+                if(feedback) { feedback->state=fx::FeedbackState::Readback; feedback->on=target; }
                 return target?@"itlwm Wi-Fi and Bluetooth report On.":@"itlwm Wi-Fi and Bluetooth report Off.";
             }
             if(interfaces.count>8) return @"Unsupported: too many CoreWLAN interfaces. No radio changed.";
@@ -120,20 +124,20 @@ NSString *FXPerformSessionAction(uint32_t action,bool physicalEvent) {
             int bluetooth=-1;
             if(!FXReadBluetooth(bluetooth)) return @"Bluetooth power is unsupported, permission denied, timed out, or readback disagrees. No radio changed.";
             const int target=fx::nextRadioPower(anyOn,bluetooth);
-            if(!physicalEvent && !confirm(target?@"Turn Wi-Fi and Bluetooth on?":@"Turn Wi-Fi and Bluetooth off?",@"This controls all enumerated CoreWLAN interfaces and the default Bluetooth controller. Connections and Bluetooth input devices may disconnect. No other radio or RF-silence guarantee is provided.")) return @"Radio request cancelled.";
-            if(generation!=FXSessionGeneration() || !FXIsConsoleUser()) return @"Radio request cancelled after session change.";
+            if(!physicalEvent && !confirm(target?@"Turn Wi-Fi and Bluetooth on?":@"Turn Wi-Fi and Bluetooth off?",@"This controls all enumerated CoreWLAN interfaces and the default Bluetooth controller. Connections and Bluetooth input devices may disconnect. No other radio or RF-silence guarantee is provided.")) { if(feedback) feedback->state=fx::FeedbackState::Cancelled; return @"Radio request cancelled."; }
+            if(generation!=FXSessionGeneration() || !FXIsConsoleUser()) { if(feedback) feedback->state=fx::FeedbackState::Cancelled; return @"Radio request cancelled after session change."; }
             // Recheck identities/state after any modal delay, before the first write.
             NSArray<CWInterface *> *current=[[CWWiFiClient sharedWiFiClient] interfaces];
             NSMutableSet<NSString *> *currentNames=[NSMutableSet set];
             for(CWInterface *wifi in current) if(wifi.interfaceName.length) [currentNames addObject:wifi.interfaceName];
-            if(current.count!=interfaces.count || ![currentNames isEqualToSet:names]) return @"Radio request cancelled after Wi-Fi topology change.";
+            if(current.count!=interfaces.count || ![currentNames isEqualToSet:names]) { if(feedback) feedback->state=fx::FeedbackState::Cancelled; return @"Radio request cancelled after Wi-Fi topology change."; }
             int freshBluetooth=-1;
             if(!FXReadBluetooth(freshBluetooth) || freshBluetooth!=bluetooth) return @"Bluetooth state changed or became unavailable. No radio changed.";
             for(CWInterface *wifi in interfaces) {
                 CWInterface *fresh=[[CWWiFiClient sharedWiFiClient] interfaceWithName:wifi.interfaceName];
                 if(!fresh || fresh.powerOn!=beforePower[wifi.interfaceName].boolValue) return @"Wi-Fi state changed before the request. No radio changed.";
             }
-            if(generation!=FXSessionGeneration() || !FXIsConsoleUser()) return @"Radio request cancelled after session change.";
+            if(generation!=FXSessionGeneration() || !FXIsConsoleUser()) { if(feedback) feedback->state=fx::FeedbackState::Cancelled; return @"Radio request cancelled after session change."; }
             // Bluetooth first: if it cannot reach target, do not disconnect Wi-Fi.
             // These APIs are not transactional. Never silently roll back or retry.
             if(bluetooth!=target && !FXWriteBluetooth(target)) return @"Bluetooth request failed or timed out; Bluetooth state is unknown. Wi-Fi was not changed. No rollback or retry was attempted.";
@@ -154,6 +158,7 @@ NSString *FXPerformSessionAction(uint32_t action,bool physicalEvent) {
                 [afterNames addObject:wifi.interfaceName];
             }
             if(afterWifi.count!=interfaces.count || ![afterNames isEqualToSet:names]) return @"Radio result is unverified: Wi-Fi topology changed.";
+            if(feedback) { feedback->state=fx::FeedbackState::Readback; feedback->on=target; }
             return target?@"All enumerated Wi-Fi interfaces and the default Bluetooth controller report On.":@"All enumerated Wi-Fi interfaces and the default Bluetooth controller report Off. Other radios and RF silence are not measured.";
         }
         default: return @"Unknown session action refused.";

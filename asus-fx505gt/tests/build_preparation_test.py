@@ -74,7 +74,7 @@ if args.upstream_project:
         personality = plistlib.loads((dest / 'AsusSMC/Info.plist').read_bytes())['IOKitPersonalities']['AsusSMC']
         for key in ('FX505GTProfileBridgeEnabled', 'FX505GTProfileFnF5Enabled', 'FX505GTDedicatedFnContractEnabled'):
             assert personality[key] is False
-    print('PASS: exact expanded overlay, shared ABI1/FnABI2/cohort check, all new enable flags remain false')
+    print('PASS: exact expanded overlay, shared ABI1/FnABI3/cohort check, all new enable flags remain false')
 else:
     print('SKIP: exact upstream project transform test needs --upstream-project')
 print('No native compiler, build output or hardware operation was invoked.')
