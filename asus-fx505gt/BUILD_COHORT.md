@@ -66,6 +66,8 @@ The entry:
 5. Builds only the AsusSMC Release target for x86_64/macOS 10.15 minimum. Signing
    is disabled as a build option, without changing OS security settings.
 6. Builds the x86_64 CLI, fixed-command fxradio companion and AppKit app together.
+   Also builds the existing 华硕控制.app and AsusAwake via build_platform.sh;
+   these are recorded in the same receipt, with no source behavior change.
    The app embeds exact CLI/radio binary hashes plus ABI/source identity. Do not
    mix it with an independently rebuilt or modified companion.
 7. Compiles the default-off BIOS303 SSDT with fixed-version iasl and warnings as
@@ -145,8 +147,9 @@ replay intentionally rejects it.
 ## Existing platform application dependency
 
 This build entry creates the Fn app and its pinned profile/radio companions.
-It deliberately does not provision a login item, privileged helper, sudoers
-rule or the existing `local.asus.platform.ui` application. The field setup
+It now also builds the existing `local.asus.platform.ui` application and
+AsusAwake. It deliberately does not provision a login item, privileged helper,
+sudoers rule or any application. The field setup
 already supplies those separately. F11 notification dispatch requires that
 platform application running; see `platform/README.md` for its source build
 and fixed helper paths. A new machine needs a separately authorized deployment,
@@ -155,3 +158,6 @@ not just this source build. The OSD adds no second sleep/lid owner.
 After a source change, the delivery manifest must be regenerated from the
 reviewed tracked component files before using this guarded entry. Do not
 bypass hash checks or include generated caches/output in the source manifest.
+
+See [DEPLOY_USERLAND.md](DEPLOY_USERLAND.md) for the verified userland packaging
+entry and inert login templates. No native package has been produced on Linux.

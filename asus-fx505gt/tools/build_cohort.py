@@ -258,6 +258,7 @@ def main():
                    'DSTROOT=' + str(out / 'unused-dst')]
         run_logged(command, out, 'kext', receipt, cwd=source)
         run_logged(['sh', str(BASE / 'tools/build_app.sh'), str(out / 'userland')], out, 'userland', receipt)
+        run_logged(['sh', str(BASE / 'tools/build_platform.sh'), str(out / 'platform')], out, 'platform', receipt)
         env = dict(os.environ, IASL=tools[0])
         run_logged(['sh', str(BASE / 'tools/build_acpi.sh'), str(out / 'acpi')], out, 'acpi', receipt, env=env)
         required = ['products/Release/AsusSMC.kext/Contents/MacOS/AsusSMC',
@@ -265,6 +266,8 @@ def main():
                     'userland/FX505GT Control.app/Contents/MacOS/FX505GTControl',
                     'userland/FX505GT Control.app/Contents/Helpers/fxradio',
                     'userland/FX505GT Control.app/Contents/Info.plist', 'userland/FXBuildIdentity.h',
+                    'platform/华硕控制.app/Contents/MacOS/AsusControl',
+                    'platform/华硕控制.app/Contents/Info.plist', 'platform/AsusAwake',
                     'acpi/SSDT-FX505GT-Fn-BIOS303.aml']
         receipt['outputs'] = {n: {'sha256': sha((out / n).read_bytes()), 'bytes': (out / n).stat().st_size} for n in required}
         identity = (out / 'userland/FXBuildIdentity.h').read_text()

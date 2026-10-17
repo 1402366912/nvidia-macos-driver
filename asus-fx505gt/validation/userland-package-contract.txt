@@ -1,0 +1,2 @@
+PASS: synthetic packaging contract, paired app/helper layout, inert startup templates, changed/missing-native/object rejection
+NOT RUN: native compilation, signing, installation, login, AppKit or hardware; fixture output removed
