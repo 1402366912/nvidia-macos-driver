@@ -9,10 +9,10 @@ if [ -e "$out" ] || [ -L "$out" ]; then echo 'Refusing to overwrite output.' >&2
 mkdir -p "$out"
 app="$out/华硕控制.app"
 mkdir -p "$app/Contents/MacOS"
-xcrun --sdk macosx clang -arch x86_64 -fobjc-arc -Wno-deprecated-declarations \
+xcrun --sdk macosx clang -arch x86_64 -fobjc-arc -Wno-deprecated-declarations -Werror=unguarded-availability-new \
   -mmacosx-version-min=10.15 -I"$base/include" "$base/platform/AsusControl.m" \
   -framework Cocoa -framework IOKit -o "$app/Contents/MacOS/AsusControl"
-xcrun --sdk macosx clang -arch x86_64 -fobjc-arc -Wno-deprecated-declarations \
+xcrun --sdk macosx clang -arch x86_64 -fobjc-arc -Wno-deprecated-declarations -Werror=unguarded-availability-new \
   -mmacosx-version-min=10.15 -I"$base/include" "$base/platform/AsusAwake.m" \
   -framework Foundation -framework IOKit -o "$out/AsusAwake"
 cp "$base/platform/Info.plist" "$app/Contents/Info.plist"

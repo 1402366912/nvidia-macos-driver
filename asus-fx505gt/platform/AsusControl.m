@@ -3,11 +3,11 @@
 #include "FXProfileABI.h"
 static NSString *const helper=@"/Library/PrivilegedHelperTools/ASUSPlatform/";
 static NSDictionary *properties(const char *cls){
- io_service_t s=IOServiceGetMatchingService(kIOMainPortDefault,IOServiceMatching(cls));if(!s)return @{};
+ io_service_t s=IOServiceGetMatchingService(kIOMasterPortDefault,IOServiceMatching(cls));if(!s)return @{};
  CFMutableDictionaryRef d=NULL;IORegistryEntryCreateCFProperties(s,&d,kCFAllocatorDefault,0);IOObjectRelease(s);return CFBridgingRelease(d)?:@{};
 }
 static BOOL readProfile(FXProfileSnapshot *snapshot){
- io_service_t service=IOServiceGetMatchingService(kIOMainPortDefault,IOServiceMatching(FX_PROFILE_SERVICE));if(!service)return NO;
+ io_service_t service=IOServiceGetMatchingService(kIOMasterPortDefault,IOServiceMatching(FX_PROFILE_SERVICE));if(!service)return NO;
  io_connect_t c=IO_OBJECT_NULL;IOReturn r=IOServiceOpen(service,mach_task_self(),FX_PROFILE_CONNECT_TYPE,&c);IOObjectRelease(service);if(r)return NO;
  size_t size=sizeof(*snapshot);r=IOConnectCallStructMethod(c,FXQuery,NULL,0,snapshot,&size);IOServiceClose(c);return r==kIOReturnSuccess&&size==sizeof(*snapshot)&&snapshot->version==FX_PROFILE_ABI_VERSION;
 }
@@ -35,7 +35,12 @@ static NSDictionary *run(NSString *name,NSArray *args){
 
 
  self.status=[[NSStatusBar systemStatusBar]statusItemWithLength:NSVariableStatusItemLength];
- NSImage *im=[NSImage imageWithSystemSymbolName:@"fanblades" accessibilityDescription:@"华硕控制"];im.template=YES;self.status.button.image=im;self.status.button.toolTip=@"FX505GT · 风扇与睡眠";
+ // SF Symbols require macOS 11; individual names can also be unavailable.
+ // Keep the menu reachable on the declared 10.15 minimum and missing symbols.
+ NSImage *im=nil;
+ if(@available(macOS 11.0,*)) im=[NSImage imageWithSystemSymbolName:@"fanblades" accessibilityDescription:@"华硕控制"];
+ if(im){im.template=YES;self.status.button.image=im;}else self.status.button.title=@"ASUS";
+ self.status.button.toolTip=@"FX505GT · 风扇与睡眠";
  self.menu=[NSMenu new];self.menu.delegate=self;self.menu.autoenablesItems=NO;self.status.menu=self.menu;
  [self item:@"华硕 FX505GT" action:nil tag:0 menu:self.menu].enabled=NO;
  self.rpmItem=[self item:@"正在读取风扇…" action:nil tag:0 menu:self.menu];self.rpmItem.enabled=NO;

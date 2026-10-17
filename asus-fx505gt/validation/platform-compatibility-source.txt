@@ -1,0 +1,2 @@
+PASS: platform source minimum-version guards, missing-symbol fallback and native availability diagnostics
+NOT RUN: Apple SDK compile/link or macOS runtime; tested hardware logic unchanged

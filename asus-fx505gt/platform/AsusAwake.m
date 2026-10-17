@@ -11,7 +11,7 @@ static int setSleep(NSString *value) {
  [t launch];[t waitUntilExit];return t.terminationStatus;
 }
 static BOOL disabled(void) {
- io_service_t s=IOServiceGetMatchingService(kIOMainPortDefault,IOServiceMatching("IOPMrootDomain"));
+ io_service_t s=IOServiceGetMatchingService(kIOMasterPortDefault,IOServiceMatching("IOPMrootDomain"));
  if(!s)return NO;
  id v=CFBridgingRelease(IORegistryEntryCreateCFProperty(s,CFSTR("SleepDisabled"),kCFAllocatorDefault,0));IOObjectRelease(s);return [v boolValue];
 }
@@ -25,7 +25,7 @@ int main(int argc,char **argv){@autoreleasepool{
   printf("sleep_result=0x%08x\n",result);return result==kIOReturnSuccess?0:4;
  }
  if(!strcmp(argv[1],"--lid-hold")) {
-  io_service_t service=IOServiceGetMatchingService(kIOMainPortDefault,IOServiceMatching(FX_PROFILE_SERVICE));if(!service)return 3;
+  io_service_t service=IOServiceGetMatchingService(kIOMasterPortDefault,IOServiceMatching(FX_PROFILE_SERVICE));if(!service)return 3;
   io_connect_t connection=IO_OBJECT_NULL;IOReturn result=IOServiceOpen(service,mach_task_self(),FX_PROFILE_CONNECT_TYPE,&connection);IOObjectRelease(service);if(result!=kIOReturnSuccess)return 4;
   uint64_t on=1;result=IOConnectCallScalarMethod(connection,FXSetClamshell,&on,1,NULL,NULL);
   if(result!=kIOReturnSuccess){fprintf(stderr,"lid_hold=0x%08x\n",result);IOServiceClose(connection);return 5;}

@@ -19,3 +19,13 @@ sh tools/build_platform.sh /new/platform-output
 沿用 /Applications/华硕控制.app，bundle ID local.asus.platform.ui；AsusAwake 安装至 /Library/PrivilegedHelperTools/ASUSPlatform/。先安装支持 selector 4 的配套 AsusSMC，重启后再启用合盖保持；不要仅替换界面而沿用旧内核模块。
 
 无线辅助程序 fxradio 需安装为 root:wheel 0755 的 /Library/PrivilegedHelperTools/org.fx505gt.fxradio（普通非 setuid 程序）。/Applications 为原生 root:admin 0775，原来的 bundle 内路径无法通过固定程序的祖先目录可写性校验；无需修改 /Applications 权限。
+
+兼容性源码修正：最低部署版本仍为 macOS 10.15。系统符号图标仅在
+macOS 11+ 请求；名称不可用时显示 ASUS 文本，保证菜单入口不消失。
+平台两个组件使用同为默认端口的 kIOMasterPortDefault，避免直接依赖
+macOS 12+ 才导出的 kIOMainPortDefault。构建将未保护的新 API 可用性
+诊断作为错误。此为源码级修正，尚未代替原生编译或旧系统运行验证。
+
+依据：
+- https://developer.apple.com/documentation/appkit/nsimage/init(systemsymbolname:accessibilitydescription:)
+- https://github.com/apple-oss-distributions/IOKitUser/blob/main/IOKitLib.h
