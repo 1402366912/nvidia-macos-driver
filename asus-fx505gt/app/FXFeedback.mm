@@ -47,9 +47,22 @@ fx::Feedback brightnessFeedback() {
     bool unique=IOIteratorIsValid(iterator) && panel && !extra; IOObjectRelease(iterator);
     if(extra) IOObjectRelease(extra);
     if(unique) {
-        Float32 brightness=-1;
-        if(IODisplayGetFloatParameter(panel,0,CFSTR(kIODisplayBrightnessKey),&brightness)==kIOReturnSuccess && fx::validLevel(brightness)) {
-            value.state=fx::FeedbackState::Readback; value.level=brightness;
+        // Match the tested ABI3 action's parameter preference; dsyp is power,
+        // never brightness. This only reads and validates the driver's range.
+        const CFStringRef choices[]={CFSTR("bklt"),CFSTR(kIODisplayBrightnessKey)};
+        for(CFStringRef parameter:choices) {
+            SInt32 actual=-1,minimum=-1,maximum=-1;
+            if(IODisplayGetIntegerRangeParameter(panel,0,parameter,&actual,&minimum,&maximum)!=kIOReturnSuccess) continue;
+            double level=fx::normalizedLevel(actual,minimum,maximum);
+            if(fx::validLevel(level)) { value.state=fx::FeedbackState::Readback; value.level=level; break; }
+        }
+        // Discard a sample if the unique internal panel changed during readback.
+        io_iterator_t current=IO_OBJECT_NULL;
+        if(IOServiceGetMatchingServices(kIOMasterPortDefault,IOServiceMatching("AppleBacklightDisplay"),&current)!=KERN_SUCCESS) value=fx::Feedback{};
+        else {
+            io_service_t first=IOIteratorNext(current),second=IOIteratorNext(current);
+            if(!IOIteratorIsValid(current) || !first || second || !IOObjectIsEqualTo(first,panel)) value=fx::Feedback{};
+            if(first) IOObjectRelease(first); if(second) IOObjectRelease(second); IOObjectRelease(current);
         }
     }
     if(panel) IOObjectRelease(panel);
@@ -66,7 +79,7 @@ void icon(uint32_t key,fx::Feedback feedback) {
             [p moveToPoint:NSMakePoint(9,25)]; [p lineToPoint:NSMakePoint(20,25)]; [p lineToPoint:NSMakePoint(33,14)];
             [p lineToPoint:NSMakePoint(33,50)]; [p lineToPoint:NSMakePoint(20,39)]; [p lineToPoint:NSMakePoint(9,39)]; [p closePath]; [p stroke];
             if(feedback.on==1) { line(NSMakePoint(43,24),NSMakePoint(57,40)); line(NSMakePoint(43,40),NSMakePoint(57,24)); }
-            else { NSBezierPath *waves=[NSBezierPath bezierPath]; waves.lineWidth=3; [waves appendBezierPathWithArcWithCenter:NSMakePoint(31,32) radius:15 startAngle:-55 endAngle:55]; [waves stroke]; if(feedback.level<0 || feedback.level>0.5) { NSBezierPath *outer=[NSBezierPath bezierPath]; outer.lineWidth=3; [outer appendBezierPathWithArcWithCenter:NSMakePoint(31,32) radius:25 startAngle:-50 endAngle:50]; [outer stroke]; } }
+            else if(fx::knownSwitch(feedback) && feedback.on==0) { NSBezierPath *waves=[NSBezierPath bezierPath]; waves.lineWidth=3; [waves appendBezierPathWithArcWithCenter:NSMakePoint(31,32) radius:15 startAngle:-55 endAngle:55]; [waves stroke]; if(feedback.level<0 || feedback.level>0.5) { NSBezierPath *outer=[NSBezierPath bezierPath]; outer.lineWidth=3; [outer appendBezierPathWithArcWithCenter:NSMakePoint(31,32) radius:25 startAngle:-50 endAngle:50]; [outer stroke]; } }
             break;
         }
         case 4:
@@ -82,16 +95,27 @@ void icon(uint32_t key,fx::Feedback feedback) {
             if(key==6 && feedback.on==0) line(NSMakePoint(8,12),NSMakePoint(55,58)); break;
         case 7:case 8:
             oval(NSMakeRect(20,20,24,24)); for(int i=0;i<8;++i) { double a=i*3.141592653589793/4; line(NSMakePoint(32+20*cos(a),32+20*sin(a)),NSMakePoint(32+27*cos(a),32+27*sin(a))); } break;
-        case 10:rectangle(NSMakeRect(10,7,44,50),2); line(NSMakePoint(10,21),NSMakePoint(54,21)); line(NSMakePoint(32,7),NSMakePoint(32,21)); break;
+        case 10: {
+            // The official FAQ has a bold vertical pad with two bottom buttons.
+            // Original paths, approximately 105x117 points after scaling.
+            NSBezierPath *pad=[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(12,9,40.8,45.8) xRadius:2 yRadius:2];
+            pad.lineWidth=4.2; pad.lineJoinStyle=NSRoundLineJoinStyle;
+            [pad moveToPoint:NSMakePoint(12,21)]; [pad lineToPoint:NSMakePoint(52.8,21)];
+            [pad moveToPoint:NSMakePoint(32.4,9)]; [pad lineToPoint:NSMakePoint(32.4,21)]; [pad stroke]; break;
+        }
         case 11: {
             NSBezierPath *p=[NSBezierPath bezierPath]; [p moveToPoint:NSMakePoint(43,54)]; [p curveToPoint:NSMakePoint(43,10) controlPoint1:NSMakePoint(0,62) controlPoint2:NSMakePoint(0,2)]; [p curveToPoint:NSMakePoint(43,54) controlPoint1:NSMakePoint(20,22) controlPoint2:NSMakePoint(20,42)]; p.lineWidth=3; [p stroke]; break;
         }
         case 12:
             for(int r=13;r<=29;r+=8) { NSBezierPath *p=[NSBezierPath bezierPath]; p.lineWidth=3; [p appendBezierPathWithArcWithCenter:NSMakePoint(24,16) radius:r startAngle:48 endAngle:132]; [p stroke]; }
-            oval(NSMakeRect(21,13,6,6)); line(NSMakePoint(48,11),NSMakePoint(48,49)); line(NSMakePoint(48,49),NSMakePoint(59,39)); line(NSMakePoint(59,39),NSMakePoint(40,22)); line(NSMakePoint(40,39),NSMakePoint(59,22)); line(NSMakePoint(59,22),NSMakePoint(48,11)); break;
+            oval(NSMakeRect(21,13,6,6)); line(NSMakePoint(48,11),NSMakePoint(48,49)); line(NSMakePoint(48,49),NSMakePoint(59,39)); line(NSMakePoint(59,39),NSMakePoint(40,22)); line(NSMakePoint(40,39),NSMakePoint(59,22)); line(NSMakePoint(59,22),NSMakePoint(48,11));
+            if(fx::knownSwitch(feedback) && feedback.on==0) line(NSMakePoint(7,9),NSMakePoint(60,57)); break;
         case 13:case 14:
-            rectangle(NSMakeRect(5,10,54,30),3); for(int row=0;row<2;++row) for(int col=0;col<7;++col) rectangle(NSMakeRect(11+col*7,27-row*8,2,2),0);
-            line(NSMakePoint(20,16),NSMakePoint(44,16));
+            // Sibling-owner photo: four upper keys, two lower keys and a space bar.
+            rectangle(NSMakeRect(5,10,54,30),2);
+            for(int col=0;col<4;++col) [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(12+col*12,27,5,6) xRadius:0.7 yRadius:0.7] fill];
+            for(int col=0;col<2;++col) [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(12+col*36,17,5,6) xRadius:0.7 yRadius:0.7] fill];
+            [[NSBezierPath bezierPathWithRoundedRect:NSMakeRect(24,17,17,6) xRadius:0.7 yRadius:0.7] fill];
             { NSBezierPath *sun=[NSBezierPath bezierPath]; sun.lineWidth=3; [sun appendBezierPathWithArcWithCenter:NSMakePoint(32,40) radius:10 startAngle:0 endAngle:180]; [sun stroke]; }
             for(int i=0;i<5;++i) { double a=i*3.141592653589793/4; line(NSMakePoint(32+15*cos(a),40+15*sin(a)),NSMakePoint(32+21*cos(a),40+21*sin(a))); } break;
         default:break;
@@ -112,11 +136,24 @@ void icon(uint32_t key,fx::Feedback feedback) {
 @implementation FXFeedbackView
 - (void)drawRect:(NSRect)dirty {
     (void)dirty;
-    [[NSColor colorWithWhite:0 alpha:0.78] setFill]; [[NSBezierPath bezierPathWithRoundedRect:self.bounds xRadius:corner yRadius:corner] fill];
-    [[NSColor colorWithWhite:1 alpha:0.25] setStroke];
+    // Opacity follows the retained legacy ATK resource's center alpha; the
+    // 270-point shape/position remains the later ASUS FAQ family reference.
+    BOOL opaque=NSWorkspace.sharedWorkspace.accessibilityDisplayShouldReduceTransparency;
+    [[NSColor colorWithWhite:0 alpha:opaque?1.0:193.0/255.0] setFill]; [[NSBezierPath bezierPathWithRoundedRect:self.bounds xRadius:corner yRadius:corner] fill];
+    [[NSColor colorWithWhite:1 alpha:NSWorkspace.sharedWorkspace.accessibilityDisplayShouldIncreaseContrast?0.8:0.15] setStroke];
     NSBezierPath *border=[NSBezierPath bezierPathWithRoundedRect:NSInsetRect(self.bounds,0.5,0.5) xRadius:corner yRadius:corner]; border.lineWidth=1; [border stroke];
     [NSColor.whiteColor set];
-    [NSGraphicsContext saveGraphicsState]; NSAffineTransform *transform=[NSAffineTransform transform]; CGFloat scale=self.code==FX_FN_EVENT_BASE+10?2.34:1.8; [transform translateXBy:(side-64*scale)/2 yBy:95]; [transform scaleBy:scale]; [transform concat]; icon(self.code-FX_FN_EVENT_BASE,self.feedback); [NSGraphicsContext restoreGraphicsState];
+    [NSGraphicsContext saveGraphicsState]; NSAffineTransform *transform=[NSAffineTransform transform]; uint32_t key=self.code-FX_FN_EVENT_BASE; CGFloat scale=(key==10 || key==13 || key==14)?2.34:1.8; [transform translateXBy:(side-64*scale)/2 yBy:95]; [transform scaleBy:scale]; [transform concat]; icon(self.code-FX_FN_EVENT_BASE,self.feedback); [NSGraphicsContext restoreGraphicsState];
+    // Unknown is visibly different from Off: never use the last requested state.
+    bool known=self.feedback.state==fx::FeedbackState::Readback &&
+        ((key==7 || key==8 || key==13 || key==14)?fx::validLevel(self.feedback.level):fx::knownSwitch(self.feedback));
+    if(!known) {
+        NSString *mark=self.feedback.state==fx::FeedbackState::Cancelled?@"×":
+            (self.feedback.state==fx::FeedbackState::Disabled?@"–":
+             (self.feedback.state==fx::FeedbackState::Dispatched || self.feedback.state==fx::FeedbackState::Accepted?@"…":@"?"));
+        [[NSColor colorWithWhite:1 alpha:0.65] setStroke]; oval(NSMakeRect(side-37,side-37,23,23));
+        [mark drawInRect:NSMakeRect(side-31,side-35,18,23) withAttributes:@{NSFontAttributeName:[NSFont systemFontOfSize:17 weight:NSFontWeightMedium],NSForegroundColorAttributeName:NSColor.whiteColor}];
+    }
     NSMutableParagraphStyle *paragraph=[NSMutableParagraphStyle new]; paragraph.alignment=NSTextAlignmentCenter;
     NSDictionary *title=@{NSFontAttributeName:[NSFont systemFontOfSize:18 weight:NSFontWeightRegular],NSForegroundColorAttributeName:NSColor.whiteColor,NSParagraphStyleAttributeName:paragraph};
     [titleFor(self.code) drawInRect:NSMakeRect(10,62,side-20,25) withAttributes:title];
@@ -149,17 +186,19 @@ void icon(uint32_t key,fx::Feedback feedback) {
 - (void)dismiss { ++_serial; [_timer invalidate]; _timer=nil; [_panel orderOut:nil]; _panel.alphaValue=1; }
 - (void)showCode:(uint32_t)code feedback:(fx::Feedback)feedback detail:(NSString *)detail {
     if(!fx::feedbackCode(code) || !FXIsConsoleUser()) { [self dismiss]; return; }
+    feedback=fx::sanitizedFeedback(feedback);
     ++_serial; [_timer invalidate];
     _view.code=code; _view.feedback=feedback;
     NSString *caption=@"Not confirmed\nSee menu status";
     if(detail.length) caption=detail;
     else if(feedback.state==fx::FeedbackState::Readback) {
-        if(code<=FX_FN_EVENT_BASE+3) caption=feedback.on==1?@"Muted · OS reports":(fx::validLevel(feedback.level)?[NSString stringWithFormat:@"%d%% · OS reports",static_cast<int>(std::lround(feedback.level*100))]:@"Unmuted · OS reports");
-        else if(code==FX_FN_EVENT_BASE+4) caption=feedback.on?@"Muted · default input":@"Unmuted · default input";
-        else if(code==FX_FN_EVENT_BASE+6) caption=feedback.on?@"On · driver reports":@"Off · driver reports";
-        else if(code==FX_FN_EVENT_BASE+12) caption=feedback.on?@"On · OS reports":@"Off · OS reports\nOther radios not measured";
+        if(code<=FX_FN_EVENT_BASE+3) caption=feedback.on==1?@"Muted · OS reports":(fx::validLevel(feedback.level)?[NSString stringWithFormat:@"%d%% · OS reports%@",static_cast<int>(std::lround(feedback.level*100)),fx::knownSwitch(feedback)?@"":@"\nMute state unknown"]:(feedback.on==0?@"Unmuted · OS reports":@"Mute and level unknown"));
+        else if(code==FX_FN_EVENT_BASE+4 && fx::knownSwitch(feedback)) caption=feedback.on?@"Muted · default input":@"Unmuted · default input";
+        else if(code==FX_FN_EVENT_BASE+6 && fx::knownSwitch(feedback)) caption=feedback.on?@"On · driver reports":@"Off · driver reports";
+        else if(code==FX_FN_EVENT_BASE+12 && fx::knownSwitch(feedback)) caption=feedback.on?@"On · OS reports":@"Off · OS reports\nOther radios not measured";
         else if(fx::validLevel(feedback.level)) caption=[NSString stringWithFormat:@"%d%% · driver reports",static_cast<int>(std::lround(feedback.level*100))];
     } else if(feedback.state==fx::FeedbackState::Accepted) caption=@"Request accepted\nActual state unmeasured";
+    else if(feedback.state==fx::FeedbackState::Dispatched) caption=@"Request sent\nCompletion not confirmed";
     else if(feedback.state==fx::FeedbackState::Cancelled) caption=@"Cancelled";
     else if(feedback.state==fx::FeedbackState::Disabled) caption=@"Session action disabled";
     _view.caption=caption; [_view setAccessibilityLabel:[NSString stringWithFormat:@"%@. %@",titleFor(code),caption]]; _view.needsDisplay=YES;
@@ -167,7 +206,11 @@ void icon(uint32_t key,fx::Feedback feedback) {
     for(NSScreen *candidate in NSScreen.screens) if(CGDisplayIsBuiltin([candidate.deviceDescription[@"NSScreenNumber"] unsignedIntValue])) { screen=candidate; break; }
     if(!screen) screen=NSScreen.mainScreen?:NSScreen.screens.firstObject;
     if(!screen) { [self dismiss]; return; }
-    NSRect frame=screen.frame; [_panel setFrameOrigin:NSMakePoint(NSMidX(frame)-side/2,NSMinY(frame)+frame.size.height*(self.screenCentered?0.5:(1-0.684))-side/2)];
+    NSRect frame=screen.frame,visible=screen.visibleFrame;
+    CGFloat x=NSMidX(frame)-side/2,y=NSMinY(frame)+frame.size.height*(self.screenCentered?0.5:(1-0.684))-side/2;
+    x=MAX(NSMinX(visible),MIN(x,NSMaxX(visible)-side));
+    y=MAX(NSMinY(visible),MIN(y,NSMaxY(visible)-side));
+    [_panel setFrameOrigin:NSMakePoint(x,y)];
     _panel.alphaValue=1; [_panel orderFrontRegardless];
     const uint64_t serial=_serial, generation=FXSessionGeneration(); __weak FXFeedbackController *weakSelf=self;
     _timer=[NSTimer timerWithTimeInterval:hold repeats:NO block:^(NSTimer *timer) {

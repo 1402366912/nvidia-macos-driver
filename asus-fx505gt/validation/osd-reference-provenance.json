@@ -1,7 +1,7 @@
 {
   "checked_utc": "2026-10-17T00:44:10Z",
   "purpose": "Reference-only provenance for independently drawn macOS OSD recreation",
-  "distribution": "Downloaded copyrighted reference images remain outside app/deliverable. No ASUS software downloaded, installed, executed, extracted, or redistributed. Small public image downloads only.",
+  "distribution": "Original image references and statically inspected official package resources are retained outside the public source tree. No proprietary binary, bitmap, disassembly or font is redistributed. No ASUS program was installed or executed.",
   "sources": [
     {
       "id": "asus_touchpad_faq",
@@ -124,7 +124,7 @@
       "file": "fx505dy_2020_keyboard_owner.jpeg",
       "source_id": "fx505dy_owner_2020",
       "image_url": "https://img.danawa.com/images/descFiles/5/165/4164837_1582467790303.jpeg",
-      "observed": "White keyboard-with-sun glyph, Korean caption 밝기 증가 (brightness increase), thin continuous bottom meter, translucent dark near-square panel with tiny rounding.",
+      "observed": "White keyboard-with-sun glyph, Korean caption \ubc1d\uae30 \uc99d\uac00 (brightness increase), thin continuous bottom meter, translucent dark near-square panel with tiny rounding.",
       "limit": "Photograph only: no valid absolute UI-pixel measurements or transparency/color inference.",
       "byte_size": 450823,
       "sha256": "58a8d78b0cacbf65f9274897012a96af5a279e9d762fdf73c15e2dc1c9e7f901",
@@ -182,5 +182,29 @@
       "Performance/Turbo glyph pixels",
       "ASUSOptimization / AsusOSD.exe ownership from official sources"
     ]
+  },
+  "source_v6": {
+    "date_utc": "2026-10-17",
+    "accepted_target": "Close independent implementation; original FX505GT Windows material unavailable, no longer a dependency",
+    "legacy_package_url": "https://dlcdnets.asus.com/pub/ASUS/nb/Apps_for_Win10/ATKPackage/ATK_Package_V100061.zip",
+    "legacy_package_sha256": "50e126c1f84e67cb4a5032a111f8bfe25cb76047b008ee12ac1e939b978217da",
+    "theme_version": "7.0.43.2",
+    "small_resource_sha256": "69f38144d155a1146dab643d76992f634b3354af3061b65bb9c5a449b8791d71",
+    "background_canvas": [
+      220,
+      221
+    ],
+    "center_rgba": [
+      0,
+      0,
+      0,
+      193
+    ],
+    "icon_canvas": [
+      130,
+      130
+    ],
+    "adopted": "Center alpha only from legacy resource; later FAQ geometry and independent paths informed by FAQ touchpad and sibling keyboard/sun photo",
+    "not_proven": "Exact FX505GT theme, native pixel equivalence, hold/fade timing or native runtime"
   }
 }

@@ -28,8 +28,8 @@ Primary sources checked on 2026-10-17:
 
 The exact executable responsible on the user's old installation is unknown.
 In particular, these sources do not prove an ASUSOptimization binary/version or
-that Armoury Crate renders every Fn popup. No package was installed, executed,
-reverse engineered or redistributed; no new license was accepted.
+that Armoury Crate renders every Fn popup. Retained official packages were inspected statically (resources/component metadata);
+none was installed, executed or redistributed, and no new license was accepted.
 
 ## Pixels actually inspected
 
@@ -55,9 +55,9 @@ reverse engineered or redistributed; no new license was accepted.
 These images establish a relevant visual family. They do **not** establish all
 14 FX505GT glyphs, every enabled/disabled state, Windows build, software version,
 DPI scaling, font identity, opacity, hold duration or fade curve. No exact
-FX505GT-specific visual or timing reference was found. The user's original
-Windows screenshot/video and software version would resolve that remaining
-visual target; hardware tests are not needed just to supply a visual reference.
+FX505GT-specific visual or timing reference was found. The user cannot supply the original Windows material and has accepted a close
+independent implementation. Obtaining that material is no longer a dependency;
+the implementation uses the available family evidence without claiming identity.
 
 ## Independent implementation
 
@@ -75,8 +75,10 @@ visual target; hardware tests are not needed just to supply a visual reference.
 - Other icons are independently drawn functional symbols, not traced or copied
   vendor assets. Status qualifiers and sometimes extra text differ from Windows
   intentionally so unsupported/unknown results cannot look like success.
-- Opacity 0.78, AppKit system font, 1.5-second hold and 0.18-second fade are
-  provisional design choices, **not measurements** from a reference video.
+- Opacity 193/255 follows the retained legacy ATK resource center alpha. This
+  combines older theme evidence with the later FAQ geometry, not a proven single
+  FX505GT theme. AppKit system font, 1.5-second hold and 0.18-second fade remain
+  independent design choices, **not measurements** from a reference video.
   Native rendering, clipping, multi-display/Spaces behavior, focus and timing
   remain untested. There is no generated mockup presented as an AppKit render.
 
@@ -84,7 +86,7 @@ visual target; hardware tests are not needed just to supply a visual reference.
 
 The kernel ABI, ACPI source and hardware paths are unchanged. The existing
 exclusive Fn listener must be enabled for physical-key OSDs; the menu says so.
-The listener still requires the existing per-launch action opt-in. Merely
+The listener still requires its existing saved HardwareFnEnabled action opt-in. Merely
 checking the OSD option does not grant or enable hardware actions.
 
 The UI observes genuine decoded dedicated Fn events. HID actions are never
@@ -105,7 +107,7 @@ or old dismissal from replacing or hiding a newer popup.
 - F9/F10: observed key and explicitly unverified outcome. The existing
   `IsTouchpadEnabled` registry property is a commanded value, so is deliberately
   not promoted to confirmed hardware state.
-- F11: accepted sleep request, not a promise that the machine slept. No delayed
+- F11: dispatched sleep request, not acknowledgment or a promise that the machine slept. No delayed
   success is shown after the session/sleep generation changes.
 - F12: existing independent final Wi-Fi and Bluetooth readback; partial failure,
   timeout or permission denial stays unconfirmed. It never claims RF silence.
@@ -131,3 +133,42 @@ Before any claim of an exact match, a native build/render must be compared with
 the actual FX505GT Windows reference at known scaling. Before any runtime-ready
 claim, native focus/Spaces, repeated keys, session interruption, cancellation,
 unsupported devices and real state-readback behavior must also be tested.
+
+## Source v6 refinement (2026-10-17)
+
+The retained official ATK 1.0.0061 package (SHA-256
+`50e126c1f84e67cb4a5032a111f8bfe25cb76047b008ee12ac1e939b978217da`)
+contains OSD2ThemeRes.dll 7.0.43.2. Its small background canvas is 220×221,
+center RGBA (0,0,0,193), with 130×130 icon canvases; a second resource scales
+these to 550×553 and 325×325. These facts support a translucent black family
+style, not replacing the later FAQ's measured 270×270 reference. The original
+AppKit paths now use a bolder two-button touchpad and a four-upper-key keyboard
+with lower side keys, space bar and rising sun, informed by the inspected
+FAQ and sibling owner photo. No extracted bitmap, binary or disassembly is
+redistributed. Public source/licensing remain MIT and separately licensed
+upstream components retain their notices.
+
+- A small `?` marks unconfirmed state, `×` cancelled, `–` disabled, and `…`
+  dispatched/accepted. These are independent truthfulness additions. They
+  are not claimed as original ASUS artwork. Missing mute state does not show
+  speaker waves; an independently read level can coexist with unknown mute.
+- Only Readback permits state-specific glyphs and meters. Invalid values and
+  any fields accompanying unknown/cancelled/disabled/dispatched states are
+  stripped before drawing. F12 Off gains a slash only after final readback.
+- F7/F8 read the same `bklt`, then `brightness` parameter preference as the
+  tested ABI3 action, validate the complete integer range and verify the
+  unique panel identity again. No additional write is introduced.
+- F11 explicitly records only notification dispatch to the existing platform
+  app. Sleep/lid behavior is unchanged. The OSD cannot prove notification
+  consumption or actual sleep.
+- Reduce Transparency uses solid black; Increase Contrast strengthens the
+  frame. Reduce Motion continues to skip fading. Placement is clamped to
+  the chosen display's visible frame so the dock/menu area cannot clip it
+  on ordinary screen sizes. This is still unverified native behavior.
+
+Targeted evidence: `validation/osd-v6-targeted-tests.txt` (portable policy and
+source contracts only), `validation/osd-v6-native-build-blocker.txt` (no macOS
+SDK in this environment). No full test matrix or hardware regression claim.
+All 14 key routes, saved hardware/Bluetooth preferences, actual bklt actions,
+itlwm control and separate sleep/lid policy are retained. Custom volume,
+brightness and keyboard-light overlays remain off by default.

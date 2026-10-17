@@ -1,0 +1,4 @@
+PASS: validated bklt ranges, independent mute certainty, sanitized unconfirmed states, feedback range/readback defaults, all 14 keys, baseline, stale/repeat/coalesced, reset, disabled, wrap
+PASS: limited source-contract assertions for ABI 3 ordered brightness drain, single session action, saved field preferences, OSD build inclusion, read-only renderer, actual-action feedback, freshness, nonactivation, timer guards and opt-in native-HUD categories
+NOT RUN: Objective-C++ AppKit compile/link, native rendering or hardware/runtime behavior
+PASS: bklt readback, truthful state glyphs, dispatched sleep, reference-derived opacity and accessible contrast

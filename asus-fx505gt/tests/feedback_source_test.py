@@ -56,3 +56,16 @@ for forbidden in ('AudioObjectSetPropertyData','IODisplaySet','IOConnectCall','C
     assert forbidden not in osd, forbidden
 print('PASS: limited source-contract assertions for ABI 3 ordered brightness drain, single session action, saved field preferences, OSD build inclusion, read-only renderer, actual-action feedback, freshness, nonactivation, timer guards and opt-in native-HUD categories')
 print('NOT RUN: Objective-C++ AppKit compile/link, native rendering or hardware/runtime behavior')
+
+# Source v6: actual ABI3 bklt range and no fake state in glyphs/meters.
+assert 'CFSTR("bklt"),CFSTR(kIODisplayBrightnessKey)' in osd
+assert 'fx::normalizedLevel(actual,minimum,maximum)' in osd
+assert 'IOObjectIsEqualTo(first,panel)' in osd
+assert 'feedback=fx::sanitizedFeedback(feedback)' in osd
+assert 'fx::knownSwitch(feedback)' in osd and 'Mute state unknown' in osd
+assert '193.0/255.0' in osd and 'accessibilityDisplayShouldReduceTransparency' in osd
+assert 'accessibilityDisplayShouldIncreaseContrast' in osd
+assert 'feedback->state=fx::FeedbackState::Dispatched' in act
+assert 'Completion not confirmed' in osd
+assert 'visible=screen.visibleFrame' in osd
+print('PASS: bklt readback, truthful state glyphs, dispatched sleep, reference-derived opacity and accessible contrast')

@@ -163,7 +163,7 @@ application, sharing its manual-sleep policy. The two independent settings are
 and “一直保持运行” (global SleepDisabled). Manual sleep releases the latter
 until wake. See platform/README.md and the field report.
 
-## On-screen Fn feedback (source v5)
+## On-screen Fn feedback (source v6)
 
 See [OSD_REFERENCE.md](../OSD_REFERENCE.md) for the inspected ASUS Windows visual
 references and exact-match limits. `FXFeedback.mm` is a native AppKit nonactivating
@@ -174,3 +174,9 @@ feedback requires the existing Fn listener; the OSD switch alone cannot enable
 hardware actions. Volume/brightness/keyboard-light custom overlays default off
 to avoid duplicating macOS. Native SDK build, rendering and runtime QA remain
 pending. No proprietary assets or Windows components are bundled.
+
+Source v6 uses the retained legacy alpha and newer family icon proportions,
+adds visible unknown/sent/cancelled state markers, reads the tested `bklt`
+brightness range, and honors Reduce Transparency/Increase Contrast. It does
+not require original Windows material. The independent close approximation
+still needs a native build and rendering check; no original assets are bundled.

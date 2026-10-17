@@ -97,6 +97,7 @@ NSString *FXPerformSessionAction(uint32_t action,bool physicalEvent,fx::Feedback
             if(![NSRunningApplication runningApplicationsWithBundleIdentifier:@"local.asus.platform.ui"].count)
                 return @"Open 华硕控制 first; it owns the unified sleep/lid policy.";
             [[NSDistributedNotificationCenter defaultCenter] postNotificationName:@"org.fx505gt.sleep-request" object:nil userInfo:nil deliverImmediately:YES];
+            if(feedback) feedback->state=fx::FeedbackState::Dispatched; // Sent, not acknowledged or measured asleep.
             return @"Sleep requested through 华硕控制; its existing lid policy will be restored after wake.";
         }
         case FXRadiosToggle: {
