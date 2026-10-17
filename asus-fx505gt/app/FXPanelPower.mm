@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+#include "FXFeedbackPolicy.hpp"
 #import <Foundation/Foundation.h>
 #include <IOKit/IOKitLib.h>
 #include <IOKit/graphics/IOGraphicsLib.h>
@@ -41,7 +42,7 @@ bool FXPanelPowerSupported() {
     io_service_t panel=uniquePanel(); if(!panel) return false;
     SInt32 state=-1; bool valid=readPower(panel,state); IOObjectRelease(panel); return valid;
 }
-NSString *FXTogglePanelPower() {
+NSString *FXTogglePanelPower(fx::Feedback *feedback) {
     if(!FXIsConsoleUser()) return @"Panel request refused: inactive console user.";
     const uint64_t generation=FXSessionGeneration();
     io_service_t panel=uniquePanel();
@@ -53,7 +54,7 @@ NSString *FXTogglePanelPower() {
     const bool restoring=before==0 && savedPanel==identity && (savedPower==1 || savedPower==2);
     const SInt32 target=fx::nextPanelPower(before,restoring?savedPower:-1);
     // Fixed documented parameter only. No direct ACPI, EC or framebuffer call.
-    if(generation!=FXSessionGeneration() || !FXIsConsoleUser()) { IOObjectRelease(panel); FXForgetPanelPower(); return @"Panel request cancelled after session change."; }
+    if(generation!=FXSessionGeneration() || !FXIsConsoleUser()) { IOObjectRelease(panel); FXForgetPanelPower(); { if(feedback) feedback->state=fx::FeedbackState::Cancelled; return @"Panel request cancelled after session change."; } }
     IOReturn result=IODisplaySetIntegerParameter(panel,0,CFSTR(kIODisplayPowerStateKey),target);
     SInt32 actual=-1; bool matched=readPower(panel,actual) && actual==target;
     io_service_t current=uniquePanel();
@@ -62,6 +63,7 @@ NSString *FXTogglePanelPower() {
     if(result!=kIOReturnSuccess || !matched || !same) { FXForgetPanelPower();
         return @"Internal-panel power request failed, changed identity, or driver readback differed; current panel power is unknown."; }
     if(target==0) { savedPanel=identity; savedPower=before; } else FXForgetPanelPower();
+    if(feedback) { feedback->state=fx::FeedbackState::Readback; feedback->on=target!=0; }
     return target==0 ? @"Internal-panel driver reports power parameter Off. External displays unchanged; physical panel power is not measured. Press Fn+F6 again to request the previous driver state."
         : (restoring?@"Internal-panel driver reports the previous power parameter restored by this request. Physical panel power is not measured.":@"Internal-panel driver reports On. No previous state was saved; On was the explicit fallback request. Physical panel power is not measured.");
 }

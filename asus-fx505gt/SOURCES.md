@@ -220,3 +220,12 @@ where established and SHA-only inherited generated-header labels otherwise.
 See [validation/kernel-object-compile.json](validation/kernel-object-compile.json).
 No dependency implementation, CI secrets, Apple SDK package or compiled object
 is redistributed by this build-readiness update.
+
+## OSD visual/state source addition (2026-10-17)
+
+[OSD_REFERENCE.md](OSD_REFERENCE.md) records the ASUS-published touchpad screenshot,
+firsthand FX505DY photographs, ASUS hotkey/component documentation and Microsoft
+Windows flyout version evidence, including the limits of each. Neither an
+FX505GT-exact appearance nor timing is claimed. Reference assets are not part of
+this source distribution. The AppKit renderer and its functional vector artwork
+are independent MIT implementations. Existing upstream notices are unchanged.

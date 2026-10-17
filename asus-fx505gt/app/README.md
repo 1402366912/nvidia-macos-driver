@@ -135,3 +135,15 @@ notifications invalidate pending app confirmations, and console/generation
 checks are repeated before actions. An already committed firmware request
 cannot be undone by a later session change; its current hardware state remains
 unknown. Authorization cancellation never triggers an automatic retry.
+
+## On-screen Fn feedback (source v5)
+
+See [OSD_REFERENCE.md](../OSD_REFERENCE.md) for the inspected ASUS Windows visual
+references and exact-match limits. `FXFeedback.mm` is a native AppKit nonactivating
+panel, not a web mockup. It uses original vector artwork, optional per-category
+OSD settings, a lower-center ASUS-family reference position or exact-center menu
+option, state-qualified captions, and cancellation-safe timers. Physical-key
+feedback requires the existing Fn listener; the OSD switch alone cannot enable
+hardware actions. Volume/brightness/keyboard-light custom overlays default off
+to avoid duplicating macOS. Native SDK build, rendering and runtime QA remain
+pending. No proprietary assets or Windows components are bundled.
