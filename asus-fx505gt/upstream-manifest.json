@@ -15,27 +15,29 @@
     "AsusSMC/FXFnPolicy.hpp"
   ],
   "sha256_after": {
-    "AsusSMC/AsusSMC.cpp": "e5a148ef1fe54affa4c2e94aa110d3178359a2479969af7f9f087b5ed2c94695",
-    "AsusSMC/AsusSMC.hpp": "a90d63b2ca1094837e9ee1ca26f4bf5f8dc0edc88097be3faa895d7a7824ff86",
+    "AsusSMC/AsusSMC.cpp": "0fab502d8d5b23c78ba9d06afaf77901fe7580e25a9895c3e5fe4badc8585a7f",
+    "AsusSMC/AsusSMC.hpp": "547f38337bc6ec83b427d037e292bc4df72488f4e7875ddc12df0ce4928f59d1",
     "AsusSMC/Info.plist": "2fb550e71af9e400e124189232fff47a2db99a8d00334e5fdef34904991520cb",
-    "AsusSMC/FXProfileABI.h": "31b922a9e5d26dce856e2883c75fb7fb58085edfb2bc281334629d045c09d993",
+    "AsusSMC/FXProfileABI.h": "5effe24a860ec190e94473c4a736306a9cab0c5d27f8b684864df45837c99df3",
     "AsusSMC/FXProfilePolicy.hpp": "fd7630e66201748b3a94d653cf904ea84412e3fb7de88074dd709131b583a69f",
-    "AsusSMC/FXProfileBridge.hpp": "8c6f23ac0b649d72d172b4c4dac5d2131bdf9ed50a2d768e80e11d50104702fa",
-    "AsusSMC/FXProfileBridge.inc": "d9d7eeb19c34995146fe505a2c47a19e0c6e4918f2ed250e11290d30bbe7e127",
-    "AsusSMC/FXFnABI.h": "b3b4c26abdf826846a1e471e72ad2be477d80dfade714af25400a95937e588e3",
-    "AsusSMC/FXFnPolicy.hpp": "8a59c3548554290d33be8c10bf144409fd7b6535c637e2a9eb19fe3ee75b4512"
+    "AsusSMC/FXProfileBridge.hpp": "04f85247ff768c83daf29dd25e5a624d8d1b3baf17e40d470582492e6c778466",
+    "AsusSMC/FXProfileBridge.inc": "3d8eea5bfd2e9e45c68f389705f1822e5909733e587eababf87806c4ef807f56",
+    "AsusSMC/FXFnABI.h": "91ddbf7a5468679b101bd896419bd95a8e5ec1eff92f4f55e2043ff04c6a138c",
+    "AsusSMC/FXFnPolicy.hpp": "2a979b994c75a317dd1fc33732f0332c63ad7eb7b36d2d6ad8a649d209e95dd1"
   },
   "expanded_overlay_directory": "upstream-overlay",
   "expanded_overlay_sha256": {
-    "upstream-overlay/AsusSMC/AsusSMC.cpp": "e5a148ef1fe54affa4c2e94aa110d3178359a2479969af7f9f087b5ed2c94695",
-    "upstream-overlay/AsusSMC/AsusSMC.hpp": "a90d63b2ca1094837e9ee1ca26f4bf5f8dc0edc88097be3faa895d7a7824ff86",
-    "upstream-overlay/AsusSMC/Info.plist": "2fb550e71af9e400e124189232fff47a2db99a8d00334e5fdef34904991520cb",
-    "upstream-overlay/AsusSMC/FXProfileABI.h": "31b922a9e5d26dce856e2883c75fb7fb58085edfb2bc281334629d045c09d993",
+    "upstream-overlay/AsusSMC/AsusSMC.cpp": "0fab502d8d5b23c78ba9d06afaf77901fe7580e25a9895c3e5fe4badc8585a7f",
+    "upstream-overlay/AsusSMC/AsusSMC.hpp": "547f38337bc6ec83b427d037e292bc4df72488f4e7875ddc12df0ce4928f59d1",
+    "upstream-overlay/AsusSMC/FXFnABI.h": "91ddbf7a5468679b101bd896419bd95a8e5ec1eff92f4f55e2043ff04c6a138c",
+    "upstream-overlay/AsusSMC/FXFnPolicy.hpp": "2a979b994c75a317dd1fc33732f0332c63ad7eb7b36d2d6ad8a649d209e95dd1",
+    "upstream-overlay/AsusSMC/FXProfileABI.h": "5effe24a860ec190e94473c4a736306a9cab0c5d27f8b684864df45837c99df3",
+    "upstream-overlay/AsusSMC/FXProfileBridge.hpp": "04f85247ff768c83daf29dd25e5a624d8d1b3baf17e40d470582492e6c778466",
+    "upstream-overlay/AsusSMC/FXProfileBridge.inc": "3d8eea5bfd2e9e45c68f389705f1822e5909733e587eababf87806c4ef807f56",
     "upstream-overlay/AsusSMC/FXProfilePolicy.hpp": "fd7630e66201748b3a94d653cf904ea84412e3fb7de88074dd709131b583a69f",
-    "upstream-overlay/AsusSMC/FXProfileBridge.hpp": "8c6f23ac0b649d72d172b4c4dac5d2131bdf9ed50a2d768e80e11d50104702fa",
-    "upstream-overlay/AsusSMC/FXProfileBridge.inc": "d9d7eeb19c34995146fe505a2c47a19e0c6e4918f2ed250e11290d30bbe7e127",
-    "upstream-overlay/AsusSMC/FXFnABI.h": "b3b4c26abdf826846a1e471e72ad2be477d80dfade714af25400a95937e588e3",
-    "upstream-overlay/AsusSMC/FXFnPolicy.hpp": "8a59c3548554290d33be8c10bf144409fd7b6535c637e2a9eb19fe3ee75b4512",
-    "upstream-overlay/LICENSE.md": "5e8686c3ddbc77a6cc89d2c2231e90f5835167cf4b48e41fda44317b2f6ae8a8"
-  }
+    "upstream-overlay/AsusSMC/Info.plist": "2fb550e71af9e400e124189232fff47a2db99a8d00334e5fdef34904991520cb",
+    "upstream-overlay/LICENSE.md": "5e8686c3ddbc77a6cc89d2c2231e90f5835167cf4b48e41fda44317b2f6ae8a8",
+    "upstream-overlay/README.md": "675f1ac1cd70efdbb438fe075e898aaeacac8558c3ab4f4e7c5cd1bad0ce57d0"
+  },
+  "patch_sha256": "b1495a8156107e011da02a2382147f485220858dbb083bbf7551a6075cd64e02"
 }

@@ -15,8 +15,8 @@ inline FnRoute fnRoute(uint32_t code) {
         case FX_FN_EVENT_BASE+4: return {0, FXMicrophoneMute, false, true};
         case FX_FN_EVENT_BASE+5: return {0, 0, true, true};
         case FX_FN_EVENT_BASE+6: return {0, FXPanelPowerToggle, false, true};
-        case FX_FN_EVENT_BASE+7: return {0x20, 0, false, true};
-        case FX_FN_EVENT_BASE+8: return {0x10, 0, false, true};
+        case FX_FN_EVENT_BASE+7: return {0, FXBrightnessDown, false, true};
+        case FX_FN_EVENT_BASE+8: return {0, FXBrightnessUp, false, true};
         case FX_FN_EVENT_BASE+9: return {0x61, 0, false, true};
         case FX_FN_EVENT_BASE+10: return {0x6b, 0, false, true};
         case FX_FN_EVENT_BASE+11: return {0, FXSystemSleep, false, true};
@@ -28,17 +28,17 @@ inline FnRoute fnRoute(uint32_t code) {
 }
 class FnQueue {
     FXSessionBatch batch_ {};
-    uint64_t lastNS_[5] {};
-    bool seen_[5] {};
+    uint64_t lastNS_[FXBrightnessUp+1] {};
+    bool seen_[FXBrightnessUp+1] {};
 public:
     FnQueue() { batch_.version=FX_FN_ABI_VERSION; batch_.size=sizeof(batch_); }
     void configure(bool enabled) { batch_.enabled=enabled; clear(); }
     bool enabled() const { return batch_.enabled != 0; }
     void observe(uint32_t code) { batch_.lastObservedCode=code; ++batch_.observedCount; }
-    void clear() { batch_.count=0; for (unsigned i=0;i<5;++i) { lastNS_[i]=0; seen_[i]=false; } }
+    void clear() { batch_.count=0; for (unsigned i=0;i<=FXBrightnessUp;++i) { lastNS_[i]=0; seen_[i]=false; } }
     void push(uint32_t action, uint32_t code, uint64_t now) {
-        if (!enabled() || action<FXMicrophoneMute || action>FXRadiosToggle) return;
-        if (seen_[action] && now>=lastNS_[action] && now-lastNS_[action]<250000000ull) return;
+        if (!enabled() || action<FXMicrophoneMute || action>FXBrightnessUp) return;
+        if (action<FXBrightnessDown && seen_[action] && now>=lastNS_[action] && now-lastNS_[action]<250000000ull) return;
         lastNS_[action]=now; seen_[action]=true;
         if (batch_.count==FX_FN_CAPACITY) { ++batch_.dropped; return; }
         batch_.events[batch_.count++]={action,code,static_cast<uint32_t>(now),static_cast<uint32_t>(now>>32)};

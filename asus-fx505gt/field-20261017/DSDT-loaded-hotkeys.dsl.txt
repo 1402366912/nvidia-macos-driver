@@ -1,0 +1,278 @@
+// Kernel-visible loaded DSDT excerpts; OpenCore patches may already be present. Not a raw firmware dump.
+
+// \BRTN
+Method (BRTN, 1, Serialized)
+    {
+        If (((DIDX & 0x0F00) == 0x0400))
+        {
+            Notify (\_SB.PCI0.GFX0.DD1F, Arg0)
+        }
+    }
+
+// \_SB.WFDE._WED
+Method (_WED, 1, NotSerialized)  // _Wxx: Wake Event, xx=0x00-0xFF
+            {
+                If ((Arg0 == 0xD0))
+                {
+                    Return (PDAT) /* \_SB_.PDAT */
+                }
+
+                Return (Zero)
+            }
+
+// \WMI0._WED
+Method (_WED, 1, NotSerialized)  // _Wxx: Wake Event, xx=0x00-0xFF
+        {
+            Return (Arg0)
+        }
+
+// \SLKI
+Method (SLKI, 1, NotSerialized)
+        {
+            Local0 = (Arg0 & 0x80)
+            Local1 = (Arg0 & 0x0F)
+            If (Local0)
+            {
+                \_SB.PCI0.LPCB.EC0.WEIE ()
+                \_SB.PCI0.LPCB.EC0.AEIC = 0xCA
+                \_SB.PCI0.LPCB.EC0.WEIE ()
+                \_SB.PCI0.LPCB.EC0.AEID = Zero
+                \_SB.PCI0.LPCB.EC0.WEIE ()
+                \_SB.PCI0.LPCB.EC0.AEID = Local1
+                \_SB.PCI0.LPCB.EC0.WEIE ()
+                Local1 |= 0xF0
+                KBBL = Local1
+            }
+            Else
+            {
+                Local1 |= 0xF0
+                KBBL = Local1
+                \_SB.PCI0.LPCB.EC0.WEIE ()
+                \_SB.PCI0.LPCB.EC0.AEIC = 0xCA
+                \_SB.PCI0.LPCB.EC0.WEIE ()
+                \_SB.PCI0.LPCB.EC0.AEID = Zero
+                \_SB.PCI0.LPCB.EC0.WEIE ()
+                \_SB.PCI0.LPCB.EC0.AEID = Zero
+                \_SB.PCI0.LPCB.EC0.WEIE ()
+            }
+
+            Local1 = \_SB.PCI0.LPCB.EC0.RRAM (0x0C53)
+            Local1 |= 0x20
+            \_SB.PCI0.LPCB.EC0.WRAM (0x0C53, Local1)
+            Return (One)
+        }
+
+// \_SB.ATKD.GANQ
+Method (GANQ, 0, Serialized)
+            {
+                P8XH (Zero, 0xF2)
+                If (AQNO)
+                {
+                    AQNO--
+                    Local0 = DerefOf (ATKQ [AQHI])
+                    AQHI++
+                    AQHI &= 0x0F
+                    Return (Local0)
+                }
+
+                Return (One)
+            }
+
+// \_SB.ATKD.IANE
+Method (IANE, 1, Serialized)
+            {
+                P8XH (Zero, 0xF1)
+                IANQ (Arg0)
+                Notify (ATKD, 0xFF) // Hardware-Specific
+            }
+
+// \_SB.ATKD._WED
+Method (_WED, 1, NotSerialized)  // _Wxx: Wake Event, xx=0x00-0xFF
+            {
+                If ((Arg0 == 0xFF))
+                {
+                    Return (GANQ ())
+                }
+
+                Return (One)
+            }
+
+// \_SB.ATKD.SLKB
+Method (SLKB, 1, NotSerialized)
+            {
+                Return (SLKI (Arg0))
+            }
+
+// \_SB.PCI0.LPCB.EC0._Q0A
+Method (_Q0A, 0, NotSerialized)  // _Qxx: EC Query, xx=0x00-0xFF
+        {
+            If ((OSYS >= 0x07DC))
+            {
+                WEIE ()
+                AEIC = 0xB8
+                WEIE ()
+                AEID = 0x03
+                WEOF ()
+            }
+        }
+
+// \_SB.PCI0.LPCB.EC0._Q0B
+Method (_Q0B, 0, NotSerialized)  // _Qxx: EC Query, xx=0x00-0xFF
+        {
+            P80B = 0x12
+            If ((OSYS >= 0x07DC))
+            {
+                WRAM (0x0470, 0xE0)
+                WRAM (0x0471, 0x21)
+                WEIE ()
+                AEIC = 0xC1
+                WEIE ()
+                AEID = 0x02
+            }
+        }
+
+// \_SB.PCI0.LPCB.EC0._Q0C
+Method (_Q0C, 0, NotSerialized)  // _Qxx: EC Query, xx=0x00-0xFF
+        {
+            P80B = 0x13
+            If ((OSYS >= 0x07DC))
+            {
+                WRAM (0x0470, 0xE0)
+                WRAM (0x0471, 0x32)
+                WEIE ()
+                AEIC = 0xC1
+                WEIE ()
+                AEID = 0x02
+                WEOF ()
+            }
+        }
+
+// \_SB.PCI0.LPCB.EC0._Q0D
+Method (_Q0D, 0, NotSerialized)  // _Qxx: EC Query, xx=0x00-0xFF
+        {
+            P80B = 0x14
+            If (ATKP)
+            {
+                ^^^^ATKD.IANE (0x7C)
+            }
+        }
+
+// \_SB.PCI0.LPCB.EC0._Q0E
+Method (_Q0E, 0, NotSerialized)  // _Qxx: EC Query, xx=0x00-0xFF
+        {
+            P80B = 0x15
+            If (ATKP)
+            {
+                ^^^^ATKD.IANE (0xAE)
+            }
+        }
+
+// \_SB.PCI0.LPCB.EC0._Q0F
+Method (_Q0F, 0, NotSerialized)  // _Qxx: EC Query, xx=0x00-0xFF
+        {
+            P80B = 0x16
+            If ((BLCT == Zero))
+            {
+                Local0 = One
+                If (ATKP)
+                {
+                    Local0 = (0x34 - Local0)
+                    ^^^^ATKD.IANE (Local0)
+                }
+            }
+            ElseIf ((BLCT == One))
+            {
+                If (ATKP)
+                {
+                    ^^^^ATKD.IANE (0x35)
+                }
+            }
+        }
+
+// \_SB.PCI0.LPCB.EC0._Q10
+Method (_Q10, 0, NotSerialized)  // _Qxx: EC Query, xx=0x00-0xFF
+        {
+            P80B = 0x17
+            If ((OSYS >= 0x07DC))
+            {
+                BRTN (0x87)
+            }
+
+            Return (Zero)
+        }
+
+// \_SB.PCI0.LPCB.EC0._Q11
+Method (_Q11, 0, NotSerialized)  // _Qxx: EC Query, xx=0x00-0xFF
+        {
+            P80B = 0x18
+            If ((OSYS >= 0x07DC))
+            {
+                BRTN (0x86)
+            }
+
+            Return (Zero)
+        }
+
+// \_SB.PCI0.LPCB.EC0._Q12
+Method (_Q12, 0, NotSerialized)  // _Qxx: EC Query, xx=0x00-0xFF
+        {
+            P80B = 0x19
+            If (ATKP)
+            {
+                ^^^^ATKD.IANE (0x84)
+            }
+        }
+
+// \_SB.PCI0.LPCB.EC0._Q13
+Method (_Q13, 0, NotSerialized)  // _Qxx: EC Query, xx=0x00-0xFF
+        {
+            P80B = 0x1A
+            If (ATKP)
+            {
+                If (TPME)
+                {
+                    ^^^^ATKD.IANE (0x6B)
+                }
+                Else
+                {
+                    ^^^^ATKD.IANE (0x6F)
+                }
+            }
+        }
+
+// \_SB.PCI0.LPCB.EC0._Q14
+Method (_Q14, 0, NotSerialized)  // _Qxx: EC Query, xx=0x00-0xFF
+        {
+            P80B = 0x1B
+            Notify (SLPB, 0x80) // Status Change
+        }
+
+// \_SB.PCI0.LPCB.EC0._Q15
+Method (_Q15, 0, NotSerialized)  // _Qxx: EC Query, xx=0x00-0xFF
+        {
+            P80B = 0x1C
+            If ((OSYS >= 0x07DC))
+            {
+                Notify (ASHS, 0x88) // Device-Specific
+            }
+        }
+
+// \_SB.PCI0.LPCB.EC0._Q6B
+Method (_Q6B, 0, NotSerialized)  // _Qxx: EC Query, xx=0x00-0xFF
+        {
+            P80B = 0x20
+            If (ATKP)
+            {
+                ^^^^ATKD.IANE (0xC4)
+            }
+        }
+
+// \_SB.PCI0.LPCB.EC0._Q6C
+Method (_Q6C, 0, NotSerialized)  // _Qxx: EC Query, xx=0x00-0xFF
+        {
+            P80B = 0x21
+            If (ATKP)
+            {
+                ^^^^ATKD.IANE (0xC5)
+            }
+        }

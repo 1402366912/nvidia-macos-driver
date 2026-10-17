@@ -1,3 +1,9 @@
+> Current FX505GT deployment: all fourteen method definitions match this
+> fixture, while the complete loaded DSDT differs. The exact current-table
+> OpenCore patch generator and enabled SSDT deployment are documented in
+> [field-20261017](../field-20261017/README.md). The historical fixture-only
+> transformation below remains unchanged; it is not the current install path.
+
 # Exact public FX505GT BIOS303 ACPI candidate
 
 This is a source-derived route, not a claim that the user's firmware is BIOS303

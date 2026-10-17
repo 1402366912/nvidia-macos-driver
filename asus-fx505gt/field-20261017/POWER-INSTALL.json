@@ -1,0 +1,22 @@
+{
+  "scope": "Observed after first grouped reboot, before audio368 reboot",
+  "macos_build": "25F84",
+  "loaded_asussmc_uuid": "1B8C6438-740D-3078-84DF-CB8075D4476F",
+  "lid_only_initial": {
+    "FX505GTLidSleepDisabled": true,
+    "SleepDisabled": 0
+  },
+  "after_user_enabled_always": {
+    "SleepDisabled": 1,
+    "lid_helper": "running",
+    "always_helper": "running"
+  },
+  "quiet_request": {
+    "lastAccepted": "silent",
+    "raw": 1,
+    "IOReturn": "0x00000000",
+    "current_profile": "unknown"
+  },
+  "gui_fan_backend": "fixed profile bridge; old asus-platform call returned unsupported and was replaced",
+  "PreferredFanProfile": 2
+}

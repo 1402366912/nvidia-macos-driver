@@ -4,15 +4,15 @@
 #include <initializer_list>
 #include <cstdio>
 int main() {
-    static_assert(FX_FN_ABI_VERSION==2,"Fn cohort regression");
+    static_assert(FX_FN_ABI_VERSION==3,"Fn cohort regression");
     for(uint32_t key=1;key<=14;++key) assert(fx::fnRoute(FX_FN_EVENT_BASE+key).recognized);
     assert(!fx::fnRoute(FX_FN_EVENT_BASE).recognized);
     assert(!fx::fnRoute(FX_FN_EVENT_BASE+15).recognized);
     for(uint32_t raw:{0x33u,0x35u,0x5eu,0x7du,0x7cu,0x88u}) assert(!fx::fnRoute(raw).recognized);
     assert(fx::fnRoute(0xf504).action==FXMicrophoneMute);
     assert(fx::fnRoute(0xf505).fan);
-    assert(fx::fnRoute(0xf507).hidCode==0x20);
-    assert(fx::fnRoute(0xf508).hidCode==0x10);
+    assert(fx::fnRoute(0xf507).action==FXBrightnessDown && fx::fnRoute(0xf507).hidCode==0);
+    assert(fx::fnRoute(0xf508).action==FXBrightnessUp && fx::fnRoute(0xf508).hidCode==0);
     assert(fx::fnRoute(0xf50b).action==FXSystemSleep);
     assert(fx::fnRoute(0xf50c).action==FXRadiosToggle);
     fx::FnQueue q; q.push(FXSystemSleep,0xf50b,1); assert(q.drain(1).count==0);
@@ -21,6 +21,8 @@ int main() {
     assert(b.version==FX_FN_ABI_VERSION && b.size==288 && b.count==1 && b.lastObservedCode==0x7c);
     assert(q.drain(1003).count==0); // No replay.
     q.push(FXPanelPowerToggle,0xf506,2000); assert(q.drain(2000002001ull).count==0);
+    q.clear(); q.push(FXBrightnessDown,0xf507,3000); q.push(FXBrightnessUp,0xf508,3001); q.push(FXBrightnessDown,0xf507,3002);
+    b=q.drain(3003); assert(b.count==3 && b.events[0].action==FXBrightnessDown && b.events[1].action==FXBrightnessUp && b.events[2].action==FXBrightnessDown);
     q.clear();
     for(uint32_t i=0;i<20;++i) q.push(FXMicrophoneMute,0xf504,3000000000ull+300000000ull*i);
     b=q.drain(8700000000ull); assert(b.dropped>=4 && b.count<=16);

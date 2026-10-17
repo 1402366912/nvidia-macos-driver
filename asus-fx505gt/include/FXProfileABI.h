@@ -8,7 +8,7 @@
 #define FX_PROFILE_CONNECT_TYPE 0x46583250u
 #define FX_PROFILE_UNKNOWN 0xffffffffu
 #define FX_PROFILE_SERVICE "AsusSMC"
-enum FXSelector { FXQuery = 0, FXSetProfile = 1 };
+enum FXSelector { FXQuery = 0, FXSetProfile = 1, FXSetClamshell = 4 };
 enum FXProfile { FXNormal = 0, FXOverboost = 1, FXSilent = 2 };
 enum FXBackend { FXNoBackend = 0, FXFanBoost = 1, FXThermalPolicy = 2 };
 enum FXState {

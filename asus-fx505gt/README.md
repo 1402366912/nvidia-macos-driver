@@ -1,8 +1,9 @@
 # FX505GT macOS profiles and all documented Fn keys: source preview v5 (OSD)
 
 Status: source WIP. Includes native AppKit menu-bar app source, CLI, a bounded
-AsusSMC backend, and a complete source-backed Fn matrix. Apple SDK native builds and
-hardware validation remain pending; the SSDT has passed an offline ACPICA build.
+AsusSMC backend, and a complete source-backed Fn matrix. Native component builds and a loaded profile bridge are now recorded in
+[field-20261017](field-20261017/README.md); all-14 Fn ACPI/driver/app wiring is deployed; physical key
+validation remains pending. The SSDT has passed an offline ACPICA build.
 All four actual kext C++ translation units also pass a recorded Mach-O object
 compile. See [BUILD_COHORT.md](BUILD_COHORT.md) for fixed inputs and one native
 build-only entry. See [FN_MATRIX.md](FN_MATRIX.md),
@@ -10,7 +11,8 @@ build-only entry. See [FN_MATRIX.md](FN_MATRIX.md),
 
 This is an isolated sibling of the NVIDIA GPU work. It adds a real, bounded
 IOKit control path to pinned **AsusSMC**, plus a matching command-line client.
-It is **source-only and unvalidated on macOS/hardware**. No kext, app binary,
+The repository delivers source; bounded native build/deployment results are recorded
+in the field report above. No kext, app binary,
 installation, loading, signing change, reboot, or firmware write is delivered
 or performed by the portable test command.
 

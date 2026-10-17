@@ -1,0 +1,2 @@
+off: Internal-panel backlight reports Off; external displays unchanged.
+restore: Internal-panel backlight reports restored/On; external displays unchanged.

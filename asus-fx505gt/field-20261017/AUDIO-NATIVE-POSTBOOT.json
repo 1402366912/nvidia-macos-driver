@@ -1,0 +1,60 @@
+{
+  "scope": "Native SimpleHDA post-boot CLI observation",
+  "macos_build": "25F84",
+  "uname_r": "25.5.0",
+  "audio_stack": [
+    {
+      "id": "as.vit9696.AppleALC",
+      "version": "1.9.8",
+      "uuid": "34DB8015-25BF-36A8-AA54-19C4C35CC625"
+    },
+    {
+      "id": "cn.laobamac.SimpleHDA",
+      "version": "1.0.0",
+      "uuid": "8803BC2B-EC4E-3FE8-BFF3-EFF1EBD6B5DA"
+    }
+  ],
+  "VoodooHDA_loaded": false,
+  "devices": [
+    {
+      "name": "内建麦克风",
+      "default_input": true,
+      "input_channels": 2,
+      "sample_rate": 44100,
+      "source": "内置麦克风"
+    },
+    {
+      "name": "内建线路输入",
+      "input_channels": 2,
+      "sample_rate": 44100,
+      "source": "线路输入"
+    },
+    {
+      "name": "内建输出",
+      "default_output": true,
+      "default_system_output": true,
+      "output_channels": 2,
+      "sample_rate": 44100,
+      "source": "内置扬声器"
+    }
+  ],
+  "read_only_capabilities": {
+    "microphone_mute": 1,
+    "internal_panel_toggle": 1,
+    "itlwm_power_api": 1,
+    "wifi_power": 1
+  },
+  "physical_status": "Three audio keys confirmed by user on preceding VoodooHDA stage; native speaker and recording effect still require distinct field observation",
+  "input_properties": {
+    "default_device": 69,
+    "mute": 0,
+    "channel_1_gain": 0.5079,
+    "channel_2_gain": 0.5079
+  },
+  "output_properties": {
+    "default_device": 78,
+    "mute": 0,
+    "channel_1_gain": 0.6474,
+    "channel_2_gain": 0.6474
+  }
+}
