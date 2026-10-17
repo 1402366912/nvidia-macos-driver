@@ -1,0 +1,112 @@
+{
+  "input_scope": "Measured codec from native VoodooHDA getdump; other inventory reuses prior selection context, not a new complete report",
+  "controller": "8086-A348",
+  "codec": "10EC-0235",
+  "codec_name": "Realtek ALC235",
+  "target_selector_darwin": "25.5.2",
+  "selected_audio_method": "AppleALC + SimpleHDA",
+  "audio_choice": "2",
+  "selected_audio_kexts": [
+    "AppleALC",
+    "SimpleHDA"
+  ],
+  "needs_oclp": false,
+  "layouts": [
+    {
+      "id": 3,
+      "comment": "Mirone - Realtek ALC235"
+    },
+    {
+      "id": 8,
+      "comment": "Realtek ALC235 Intel NUC 8"
+    },
+    {
+      "id": 11,
+      "comment": "Realtek ALC235 for Ienovo by soto2080"
+    },
+    {
+      "id": 12,
+      "comment": "ALC235 for Lenovo Rescuer 15ISK by Z39"
+    },
+    {
+      "id": 13,
+      "comment": "Deskmini H470 ALC235 by dumk1217"
+    },
+    {
+      "id": 14,
+      "comment": "the-braveknight - Realtek ALC235 for Lenovo Legion Y520"
+    },
+    {
+      "id": 15,
+      "comment": "qiuchenly - Realtek ALC235 for ASUS FX53VD"
+    },
+    {
+      "id": 16,
+      "comment": "MacPeet - Realtek ALC235 for ASUS GL553VD"
+    },
+    {
+      "id": 17,
+      "comment": "Realtek ALC235 for Lenovo ThinkCentre Tiny M720q by marian"
+    },
+    {
+      "id": 18,
+      "comment": "ALC235 for Asrock_bb_310 by_vio"
+    },
+    {
+      "id": 21,
+      "comment": "ALC235 for Lenovo C530 Desktop PC by Andres ZeroCross"
+    },
+    {
+      "id": 22,
+      "comment": "ALC235 for Asus ROG GL553VD-FY380 by Andres ZeroCross"
+    },
+    {
+      "id": 24,
+      "comment": "ALC235 for Asus TUF FX705GM by TheRealGudv1n"
+    },
+    {
+      "id": 28,
+      "comment": "vusun123 - Realtek ALC235 for Lenovo Legion Y520"
+    },
+    {
+      "id": 29,
+      "comment": "hla63 - Realtek ALC235 for Msi Modern 15 A10M"
+    },
+    {
+      "id": 33,
+      "comment": "Custom by fuzzyrock for ALC235 Lenovo A340-22IWL"
+    },
+    {
+      "id": 35,
+      "comment": "Realtek ALC235 for Lenovo Qitian M420 by Cryse Hillmes"
+    },
+    {
+      "id": 36,
+      "comment": "ALC235 for Lenovo Tianyi 510 pro-18ICB Desktop PC by hgs v1"
+    },
+    {
+      "id": 37,
+      "comment": "Realtek ALC235 for Lenovo Ideacentre Mini 5"
+    },
+    {
+      "id": 72,
+      "comment": "Realtek ALC235 for Lenovo M920x by meloay"
+    },
+    {
+      "id": 88,
+      "comment": "NUC8I5BEH JUST MIC"
+    },
+    {
+      "id": 99,
+      "comment": "ALC235 for Lenovo TianYi 510s Mini by DalianSky"
+    }
+  ],
+  "chosen_layout": 24,
+  "layout_reason": "Measured internal DMIC pin0x12 and speaker pin0x14 match the ASUS TUF FX705GM ALC235 layout24 topology; did not copy unrelated FX505 community layout30 for a different codec",
+  "native_uname_r": "25.5.0",
+  "controller_only_probe": {
+    "input": "8086-A348",
+    "audio_prompt_reached": false,
+    "selected_audio_kexts": []
+  }
+}

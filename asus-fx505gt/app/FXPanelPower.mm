@@ -8,7 +8,8 @@ extern bool FXIsConsoleUser();
 extern uint64_t FXSessionGeneration();
 static uint64_t savedPanel=0;
 static SInt32 savedPower=-1;
-void FXForgetPanelPower() { savedPanel=0; savedPower=-1; }
+static CFStringRef savedParameter=nullptr;
+void FXForgetPanelPower() { savedPanel=0; savedPower=-1; savedParameter=nullptr; }
 // Apple's pinned AppleBacklightDisplay::probe requires a built-in LCD panel.
 // Never select a generic IODisplay, the first framebuffer, or external display.
 static io_service_t uniquePanel() {
@@ -23,45 +24,71 @@ static bool integer(CFDictionaryRef dict,CFStringRef key,SInt32 &value) {
     CFTypeRef object=CFDictionaryGetValue(dict,key);
     return object && CFGetTypeID(object)==CFNumberGetTypeID() && CFNumberGetValue(static_cast<CFNumberRef>(object),kCFNumberSInt32Type,&value);
 }
-static bool readPower(io_service_t panel,SInt32 &value) {
+static bool readPanel(io_service_t panel, CFStringRef &parameter, SInt32 &value, SInt32 &maximum) {
     CFDictionaryRef params=nullptr;
-    if(IODisplayCopyParameters(panel,0,&params)!=kIOReturnSuccess || !params) { if(params) CFRelease(params); return false; }
+    if(IODisplayCopyParameters(panel,0,&params)!=kIOReturnSuccess || !params) return false;
     bool valid=false;
-    if(CFGetTypeID(params)==CFDictionaryGetTypeID()) {
-        CFTypeRef object=CFDictionaryGetValue(params,CFSTR(kIODisplayPowerStateKey));
-        if(object && CFGetTypeID(object)==CFDictionaryGetTypeID()) {
-            auto range=static_cast<CFDictionaryRef>(object); SInt32 min=-1,max=-1;
-            valid=integer(range,CFSTR(kIODisplayValueKey),value) && integer(range,CFSTR(kIODisplayMinValueKey),min) &&
-                integer(range,CFSTR(kIODisplayMaxValueKey),max) && fx::panelPowerRange(value,min,max);
-        }
+    const CFStringRef choices[]={CFSTR(kIODisplayPowerStateKey),CFSTR("bklt")};
+    for(CFStringRef key:choices) {
+        CFTypeRef object=CFDictionaryGetValue(params,key);
+        if(!object || CFGetTypeID(object)!=CFDictionaryGetTypeID()) continue;
+        auto range=static_cast<CFDictionaryRef>(object); SInt32 minimum=-1;
+        if(!integer(range,CFSTR(kIODisplayValueKey),value) || !integer(range,CFSTR(kIODisplayMinValueKey),minimum) || !integer(range,CFSTR(kIODisplayMaxValueKey),maximum)) continue;
+        if(minimum!=0 || maximum<=0 || value<0 || value>maximum) continue;
+        if(CFEqual(key,CFSTR(kIODisplayPowerStateKey)) && maximum!=2) continue;
+        parameter=key; valid=true; break;
     }
     CFRelease(params); return valid;
 }
 bool FXPanelPowerSupported() {
     io_service_t panel=uniquePanel(); if(!panel) return false;
-    SInt32 state=-1; bool valid=readPower(panel,state); IOObjectRelease(panel); return valid;
+    CFStringRef parameter=nullptr; SInt32 state=-1,maximum=0; bool valid=readPanel(panel,parameter,state,maximum); IOObjectRelease(panel); return valid;
 }
 NSString *FXTogglePanelPower() {
     if(!FXIsConsoleUser()) return @"Panel request refused: inactive console user.";
     const uint64_t generation=FXSessionGeneration();
     io_service_t panel=uniquePanel();
     if(!panel) return @"Unsupported: no unique AppleBacklightDisplay internal panel. No display changed.";
-    SInt32 before=-1;
-    if(!readPower(panel,before)) { IOObjectRelease(panel); return @"Unsupported: internal panel has no valid dsyp power parameter with range 0..2. No brightness or all-display fallback."; }
+    CFStringRef parameter=nullptr; SInt32 before=-1,maximum=0;
+    if(!readPanel(panel,parameter,before,maximum)) { IOObjectRelease(panel); return @"Unsupported: internal panel has neither a dsyp power nor bklt backlight parameter."; }
     uint64_t identity=0;
     if(IORegistryEntryGetRegistryEntryID(panel,&identity)!=KERN_SUCCESS || !identity) { IOObjectRelease(panel); return @"Internal-panel identity unavailable. No display changed."; }
-    const bool restoring=before==0 && savedPanel==identity && (savedPower==1 || savedPower==2);
-    const SInt32 target=fx::nextPanelPower(before,restoring?savedPower:-1);
+    const bool restoring=before==0 && savedPanel==identity && savedParameter && CFEqual(savedParameter,parameter) && savedPower>0 && savedPower<=maximum;
+    const SInt32 target=before>0?0:(restoring?savedPower:maximum);
     // Fixed documented parameter only. No direct ACPI, EC or framebuffer call.
     if(generation!=FXSessionGeneration() || !FXIsConsoleUser()) { IOObjectRelease(panel); FXForgetPanelPower(); return @"Panel request cancelled after session change."; }
-    IOReturn result=IODisplaySetIntegerParameter(panel,0,CFSTR(kIODisplayPowerStateKey),target);
-    SInt32 actual=-1; bool matched=readPower(panel,actual) && actual==target;
+    IOReturn result=IODisplaySetIntegerParameter(panel,0,parameter,target);
+    CFStringRef afterParameter=nullptr; SInt32 actual=-1,afterMax=0; bool matched=readPanel(panel,afterParameter,actual,afterMax) && CFEqual(afterParameter,parameter) && actual==target;
     io_service_t current=uniquePanel();
     bool same=current && IOObjectIsEqualTo(panel,current); if(current) IOObjectRelease(current);
     IOObjectRelease(panel);
     if(result!=kIOReturnSuccess || !matched || !same) { FXForgetPanelPower();
         return @"Internal-panel power request failed, changed identity, or driver readback differed; current panel power is unknown."; }
-    if(target==0) { savedPanel=identity; savedPower=before; } else FXForgetPanelPower();
-    return target==0 ? @"Internal-panel driver reports power parameter Off. External displays unchanged; physical panel power is not measured. Press Fn+F6 again to request the previous driver state."
-        : (restoring?@"Internal-panel driver reports the previous power parameter restored by this request. Physical panel power is not measured.":@"Internal-panel driver reports On. No previous state was saved; On was the explicit fallback request. Physical panel power is not measured.");
+    if(target==0) { savedPanel=identity; savedPower=before; savedParameter=parameter; } else FXForgetPanelPower();
+    const bool backlight=CFEqual(parameter,CFSTR("bklt"));
+    return [NSString stringWithFormat:@"Internal-panel %@ reports %@; external displays unchanged.",backlight?@"backlight":@"power parameter",target==0?@"Off":@"restored/On"];
+}
+
+NSString *FXAdjustPanelBrightness(int direction) {
+    if(!FXIsConsoleUser() || (direction!=-1 && direction!=1)) return @"Brightness request refused.";
+    io_service_t panel=uniquePanel(); if(!panel) return @"No unique internal panel.";
+    CFDictionaryRef params=nullptr; CFStringRef key=nullptr;
+    SInt32 before=0,minimum=0,maximum=0;
+    if(IODisplayCopyParameters(panel,0,&params)==kIOReturnSuccess && params) {
+        const CFStringRef choices[]={CFSTR("bklt"),CFSTR("brightness")};
+        for(CFStringRef candidate:choices) {
+            CFTypeRef object=CFDictionaryGetValue(params,candidate);
+            if(!object || CFGetTypeID(object)!=CFDictionaryGetTypeID()) continue;
+            auto range=static_cast<CFDictionaryRef>(object);
+            if(integer(range,CFSTR(kIODisplayValueKey),before) && integer(range,CFSTR(kIODisplayMinValueKey),minimum) && integer(range,CFSTR(kIODisplayMaxValueKey),maximum) && minimum==0 && maximum>0 && before>=0 && before<=maximum) { key=candidate; break; }
+        }
+        CFRelease(params);
+    }
+    if(!key) { IOObjectRelease(panel); return @"Internal-panel brightness parameter unavailable."; }
+    const SInt32 step=maximum/16+(maximum%16!=0);
+    SInt32 target=direction>0 ? (before>maximum-step?maximum:before+step) : (before<step?minimum:before-step);
+    IOReturn result=IODisplaySetIntegerParameter(panel,0,key,target);
+    SInt32 actual=-1; result=result==kIOReturnSuccess?IODisplayGetIntegerRangeParameter(panel,0,key,&actual,&minimum,&maximum):result;
+    IOObjectRelease(panel); FXForgetPanelPower();
+    return result==kIOReturnSuccess && actual==target ? [NSString stringWithFormat:@"Internal-panel brightness %d/%d",actual,maximum] : @"Internal-panel brightness write/readback failed.";
 }

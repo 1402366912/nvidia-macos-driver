@@ -2,8 +2,8 @@
 
 Status: source WIP. Includes native AppKit menu-bar app source, CLI, a bounded
 AsusSMC backend, and a complete source-backed Fn matrix. Native component builds and a loaded profile bridge are now recorded in
-[field-20261017](field-20261017/README.md); all-14 Fn integration and physical key
-validation remain pending. The SSDT has passed an offline ACPICA build.
+[field-20261017](field-20261017/README.md); all-14 Fn ACPI/driver/app wiring is deployed; physical key
+validation remains pending. The SSDT has passed an offline ACPICA build.
 All four actual kext C++ translation units also pass a recorded Mach-O object
 compile. See [BUILD_COHORT.md](BUILD_COHORT.md) for fixed inputs and one native
 build-only entry. See [FN_MATRIX.md](FN_MATRIX.md),

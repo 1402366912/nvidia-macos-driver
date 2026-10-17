@@ -8,13 +8,14 @@
 #undef PRIVATE
 #include <IOKit/IOUserClient.h>
 #include <IOKit/IOLocks.h>
+#include <IOKit/pwr_mgt/RootDomain.h>
 #pragma pop_macro("PRIVATE")
 #include "FXProfilePolicy.hpp"
 #include "FXFnPolicy.hpp"
 class AsusSMC;
 class AsusSMCProfileUserClient;
 struct FXGateCall {
-    enum Operation { Initialize, Query, Set, Message, Suspend, Capabilities, ClaimSession, ReadSession, ReleaseSession, Stop } operation;
+    enum Operation { Initialize, Query, Set, Message, Suspend, Capabilities, ClaimSession, ReadSession, ReleaseSession, SetClamshell, Stop } operation;
     uint64_t arrivalNS {0};
     uint32_t powerFlags {0}, powerFrom {0}, powerTo {0};
     uint32_t profile {0}, messageType {0};

@@ -44,7 +44,7 @@ static bool radioPath(NSString *path,struct stat *out) {
     return true;
 }
 static bool companion(NSString **path) {
-    NSString *candidate=[NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"Contents/Helpers/fxradio"];
+    NSString *candidate=@"/Library/PrivilegedHelperTools/org.fx505gt.fxradio";
     struct stat before {},after {};
     if(!radioPath(candidate,&before) || before.st_size<=0 || before.st_size>4*1024*1024) return false;
     int fd=open(candidate.fileSystemRepresentation,O_RDONLY|O_NOFOLLOW|O_CLOEXEC);

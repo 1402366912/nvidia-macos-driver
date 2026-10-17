@@ -311,7 +311,11 @@ diff --git a/AsusSMC/AsusSMC.hpp b/AsusSMC/AsusSMC.hpp
      struct guid_block {
          char guid[16];
          union {
-@@ -70,6 +100,7 @@
+@@ -67,9 +97,11 @@
+         uint8_t flags;
+     };
+ 
++    AsusSMCProfileUserClient *fxLidClient {nullptr};
      struct wmi_args {
          uint32_t arg0;
          uint32_t arg1;
@@ -319,7 +323,7 @@ diff --git a/AsusSMC/AsusSMC.hpp b/AsusSMC/AsusSMC.hpp
      } __packed;
  
      enum {
-@@ -93,7 +124,7 @@
+@@ -93,7 +125,7 @@
      static constexpr uint8_t NOTIFY_BRIGHTNESS_DOWN_MIN = 0x20;
      static constexpr uint8_t NOTIFY_BRIGHTNESS_DOWN_MAX = 0x2F;
  
@@ -362,7 +366,7 @@ new file mode 100644
 +#define FX_PROFILE_CONNECT_TYPE 0x46583250u
 +#define FX_PROFILE_UNKNOWN 0xffffffffu
 +#define FX_PROFILE_SERVICE "AsusSMC"
-+enum FXSelector { FXQuery = 0, FXSetProfile = 1 };
++enum FXSelector { FXQuery = 0, FXSetProfile = 1, FXSetClamshell = 4 };
 +enum FXProfile { FXNormal = 0, FXOverboost = 1, FXSilent = 2 };
 +enum FXBackend { FXNoBackend = 0, FXFanBoost = 1, FXThermalPolicy = 2 };
 +enum FXState {
@@ -571,7 +575,7 @@ diff --git a/AsusSMC/FXProfileBridge.hpp b/AsusSMC/FXProfileBridge.hpp
 new file mode 100644
 --- /dev/null
 +++ b/AsusSMC/FXProfileBridge.hpp
-@@ -0,0 +1,44 @@
+@@ -0,0 +1,45 @@
 +/* SPDX-License-Identifier: MIT */
 +#ifndef FX_PROFILE_BRIDGE_HPP
 +#define FX_PROFILE_BRIDGE_HPP
@@ -582,13 +586,14 @@ new file mode 100644
 +#undef PRIVATE
 +#include <IOKit/IOUserClient.h>
 +#include <IOKit/IOLocks.h>
++#include <IOKit/pwr_mgt/RootDomain.h>
 +#pragma pop_macro("PRIVATE")
 +#include "FXProfilePolicy.hpp"
 +#include "FXFnPolicy.hpp"
 +class AsusSMC;
 +class AsusSMCProfileUserClient;
 +struct FXGateCall {
-+    enum Operation { Initialize, Query, Set, Message, Suspend, Capabilities, ClaimSession, ReadSession, ReleaseSession, Stop } operation;
++    enum Operation { Initialize, Query, Set, Message, Suspend, Capabilities, ClaimSession, ReadSession, ReleaseSession, SetClamshell, Stop } operation;
 +    uint64_t arrivalNS {0};
 +    uint32_t powerFlags {0}, powerFrom {0}, powerTo {0};
 +    uint32_t profile {0}, messageType {0};
@@ -620,7 +625,7 @@ diff --git a/AsusSMC/FXProfileBridge.inc b/AsusSMC/FXProfileBridge.inc
 new file mode 100644
 --- /dev/null
 +++ b/AsusSMC/FXProfileBridge.inc
-@@ -0,0 +1,342 @@
+@@ -0,0 +1,362 @@
 +/* SPDX-License-Identifier: MIT
 + * Included by AsusSMC.cpp so the pinned upstream target builds this code
 + * without silently omitting an unregistered Xcode translation unit.
@@ -703,6 +708,10 @@ new file mode 100644
 +            return kIOReturnNotPrivileged;
 +        call.operation = FXGateCall::Set;
 +        call.profile = static_cast<uint32_t>(args->scalarInput[0]);
++    } else if (selector == FXSetClamshell) {
++        if(args->scalarInputCount!=1 || !args->scalarInput || args->scalarInput[0]>1 || args->structureOutputSize) return kIOReturnBadArgument;
++        if(clientHasPrivilege(ownerTask_,kIOClientPrivilegeAdministrator)!=kIOReturnSuccess || clientHasPrivilege(current_task(),kIOClientPrivilegeAdministrator)!=kIOReturnSuccess) return kIOReturnNotPrivileged;
++        call.operation=FXGateCall::SetClamshell; call.profile=static_cast<uint32_t>(args->scalarInput[0]); call.client=this;
 +    } else if (selector == FXClaimSession || selector == FXReadSession) {
 +        // "console" is the XNU console-user privilege string. Unsupported
 +        // implementations fail closed. Never accept a user-supplied UID.
@@ -770,6 +779,7 @@ new file mode 100644
 +    if (!self || !call) return kIOReturnBadArgument;
 +    if (call->operation == FXGateCall::Stop) {
 +        self->fxReleaseSession();
++        if(self->fxLidClient) { if(auto root=self->getPMRootDomain()) root->receivePowerNotification(kIOPMEnableClamshell); self->fxLidClient=nullptr; self->setProperty("FX505GTLidSleepDisabled",false); }
 +        self->fxFullyAwake=false;
 +        self->fxRunning = false;
 +        self->fxPolicy.stop();
@@ -777,6 +787,7 @@ new file mode 100644
 +    }
 +    if (call->operation == FXGateCall::ReleaseSession) {
 +        if (self->fxSessionClient == call->client) self->fxReleaseSession();
++        if(self->fxLidClient==call->client) { if(auto root=self->getPMRootDomain()) root->receivePowerNotification(kIOPMEnableClamshell); self->fxLidClient=nullptr; self->setProperty("FX505GTLidSleepDisabled",false); }
 +        return kIOReturnSuccess;
 +    }
 +    if (call->operation == FXGateCall::Initialize) {
@@ -799,6 +810,19 @@ new file mode 100644
 +    }
 +    if (!self->fxRunning || self->isInactive() || !self->atkDevice ||
 +        self->atkDevice != self->getProvider()) return kIOReturnNotAttached;
++    if(call->operation==FXGateCall::SetClamshell) {
++        auto root=self->getPMRootDomain(); if(!root) return kIOReturnNotReady;
++        if(call->profile) {
++            if(self->fxLidClient && self->fxLidClient!=call->client) return kIOReturnExclusiveAccess;
++            IOReturn result=root->receivePowerNotification(kIOPMDisableClamshell);
++            if(result==kIOReturnSuccess) { self->fxLidClient=call->client; self->setProperty("FX505GTLidSleepDisabled",true); }
++            return result;
++        }
++        if(self->fxLidClient!=call->client) return kIOReturnSuccess;
++        IOReturn result=root->receivePowerNotification(kIOPMEnableClamshell);
++        if(result==kIOReturnSuccess) { self->fxLidClient=nullptr; self->setProperty("FX505GTLidSleepDisabled",false); }
++        return result;
++    }
 +    if (call->operation == FXGateCall::Suspend) {
 +        self->fxPolicy.suspend();
 +        self->fxFullyAwake=false; self->fxReleaseSession();
@@ -810,6 +834,7 @@ new file mode 100644
 +            ((call->powerFlags & 2u) || (!call->powerFlags && !call->powerFrom)) &&
 +            (call->powerTo & 3u)==3u;
 +        if (!self->fxFullyAwake) self->fxReleaseSession();
++        else if(self->fxLidClient) { if(auto root=self->getPMRootDomain()) root->receivePowerNotification(kIOPMDisableClamshell); }
 +        return kIOReturnSuccess;
 +    }
 +    if (call->operation == FXGateCall::Message) {
@@ -967,7 +992,7 @@ diff --git a/AsusSMC/FXFnABI.h b/AsusSMC/FXFnABI.h
 new file mode 100644
 --- /dev/null
 +++ b/AsusSMC/FXFnABI.h
-@@ -0,0 +1,25 @@
+@@ -0,0 +1,26 @@
 +/* SPDX-License-Identifier: MIT
 + * Dedicated opt-in ACPI contract, NOT claimed native FX505GT event numbers.
 + * FXFnBase + 1..12 = F1..F12; +13/+14 = Up/Down.
@@ -975,12 +1000,13 @@ new file mode 100644
 +#ifndef FX_FN_ABI_H
 +#define FX_FN_ABI_H
 +#include <stdint.h>
-+#define FX_FN_ABI_VERSION 2u
++#define FX_FN_ABI_VERSION 3u
 +#define FX_FN_EVENT_BASE 0x0000f500u
 +#define FX_FN_CAPACITY 16u
 +enum FXFnSelector { FXClaimSession = 2, FXReadSession = 3 };
 +enum FXSessionAction { FXNoAction = 0, FXMicrophoneMute = 1,
-+    FXPanelPowerToggle = 2, FXSystemSleep = 3, FXRadiosToggle = 4 };
++    FXPanelPowerToggle = 2, FXSystemSleep = 3, FXRadiosToggle = 4,
++    FXBrightnessDown = 5, FXBrightnessUp = 6 };
 +typedef struct FXSessionEvent {
 +    uint32_t action, acpiCode, uptimeLo, uptimeHi;
 +} FXSessionEvent;
@@ -1015,8 +1041,8 @@ new file mode 100644
 +        case FX_FN_EVENT_BASE+4: return {0, FXMicrophoneMute, false, true};
 +        case FX_FN_EVENT_BASE+5: return {0, 0, true, true};
 +        case FX_FN_EVENT_BASE+6: return {0, FXPanelPowerToggle, false, true};
-+        case FX_FN_EVENT_BASE+7: return {0x20, 0, false, true};
-+        case FX_FN_EVENT_BASE+8: return {0x10, 0, false, true};
++        case FX_FN_EVENT_BASE+7: return {0, FXBrightnessDown, false, true};
++        case FX_FN_EVENT_BASE+8: return {0, FXBrightnessUp, false, true};
 +        case FX_FN_EVENT_BASE+9: return {0x61, 0, false, true};
 +        case FX_FN_EVENT_BASE+10: return {0x6b, 0, false, true};
 +        case FX_FN_EVENT_BASE+11: return {0, FXSystemSleep, false, true};
@@ -1028,17 +1054,17 @@ new file mode 100644
 +}
 +class FnQueue {
 +    FXSessionBatch batch_ {};
-+    uint64_t lastNS_[5] {};
-+    bool seen_[5] {};
++    uint64_t lastNS_[FXBrightnessUp+1] {};
++    bool seen_[FXBrightnessUp+1] {};
 +public:
 +    FnQueue() { batch_.version=FX_FN_ABI_VERSION; batch_.size=sizeof(batch_); }
 +    void configure(bool enabled) { batch_.enabled=enabled; clear(); }
 +    bool enabled() const { return batch_.enabled != 0; }
 +    void observe(uint32_t code) { batch_.lastObservedCode=code; ++batch_.observedCount; }
-+    void clear() { batch_.count=0; for (unsigned i=0;i<5;++i) { lastNS_[i]=0; seen_[i]=false; } }
++    void clear() { batch_.count=0; for (unsigned i=0;i<=FXBrightnessUp;++i) { lastNS_[i]=0; seen_[i]=false; } }
 +    void push(uint32_t action, uint32_t code, uint64_t now) {
-+        if (!enabled() || action<FXMicrophoneMute || action>FXRadiosToggle) return;
-+        if (seen_[action] && now>=lastNS_[action] && now-lastNS_[action]<250000000ull) return;
++        if (!enabled() || action<FXMicrophoneMute || action>FXBrightnessUp) return;
++        if (action<FXBrightnessDown && seen_[action] && now>=lastNS_[action] && now-lastNS_[action]<250000000ull) return;
 +        lastNS_[action]=now; seen_[action]=true;
 +        if (batch_.count==FX_FN_CAPACITY) { ++batch_.dropped; return; }
 +        batch_.events[batch_.count++]={action,code,static_cast<uint32_t>(now),static_cast<uint32_t>(now>>32)};

@@ -1,7 +1,8 @@
 # FX505GT Control: native menu-bar app source
 
-Status: source WIP; no native compilation or hardware/runtime validation in
-this Linux workspace. This is a real AppKit/IOKit implementation, not an HTML
+Status: native components built and deployed on the FX505GT; see
+[the current field report](../field-20261017/README.md). Physical keys still require
+actual one-press confirmation. This is a real AppKit/IOKit implementation, not an HTML
 mock-up. It requires a native Apple SDK build and the matching patched AsusSMC.
 
 ## Implemented boundary
@@ -32,8 +33,8 @@ mock-up. It requires a native Apple SDK build and the matching patched AsusSMC.
 ## Full Fn session actions
 
 Enable the dedicated ACPI contract only after reviewing `../FN_MATRIX.md` and
-its BIOS-specific source evidence. The app's “Handle dedicated Fn session
-  actions this launch” option starts off each launch. The kernel grants one
+its BIOS-specific source evidence. The app's “Enable Fn shortcuts” option is saved in `HardwareFnEnabled`.
+The site installation enables it and starts the ordinary menu app at login. The kernel grants one
 exclusive lease to one active-console userclient; it cannot be stolen by a
 second client while live. The owner must poll within two seconds. Switching
 console user, sleep, close, lease expiry and disconnect clear queued actions.
@@ -46,17 +47,18 @@ Normal HID Fn actions stay in AsusSMC and are not synthesized again by this app.
 F4 toggles only a readable, settable master mute on the default input device;
 unsupported inputs remain explicitly unsupported.
 
-F6 uses only a unique AppleBacklightDisplay internal panel advertising a
-well-formed `dsyp` power parameter with range0..2. Public IODisplay calls
+F6 uses only a unique AppleBacklightDisplay internal panel. It prefers a
+well-formed `dsyp` power parameter with range0..2; the actual FX505GT driver
+instead has a `bklt` backlight range, which is used for backlight off/restore. Public IODisplay calls
 request Off0 or the saved prior state1/2; if already Off without a saved state,
 the explicit request is On2. The prior state is bound to the same registry ID
 and discarded on session/sleep notifications or a failed/changed service.
-There is no automatic startup/wake restoration, no brightness substitution,
-and no all-display fallback. The returned value is a driver-maintained
+There is no automatic startup/wake restoration or all-display fallback.
+The bklt route controls backlight intensity, not an electrical panel power rail. The returned value is a driver-maintained
 parameter after handler acceptance, not measured physical panel power. BIOS303
 BLCT/SPBI/GPBL are not used as a hardware control/readback interface.
 
-F11 uses real IOPMSleepSystem. Enabling physical Fn actions each launch grants
+F11 uses real IOPMSleepSystem. Enabling the saved Fn shortcuts preference grants
 explicit permission for genuine queued Fn events, so a physical FnF11 does not
 show a redundant per-press dialog. The manual menu action still confirms.
 Queued events are checked against their dedicated code/action mapping. No
@@ -73,7 +75,10 @@ and private preference must agree. Availability is not a promise that a
 particular non-Apple adapter supports power-off. Each set has an independent
 post-read, and failure never becomes a success indicator.
 
-F12 first validates Bluetooth and every enumerated CoreWLAN interface (1..8,
+When CoreWLAN has no interface, F12 uses the existing itlwm POWER ABI1
+(selector2, set bit23), exactly the provider already used by HeliPort. It reads
+and rechecks its reported power; no raw/AWDL session or root helper is opened.
+Otherwise, F12 first validates Bluetooth and every enumerated CoreWLAN interface (1..8,
 unique nonempty names). If any is On, the target is Off; only when all report
 Off does it request On. Bluetooth is processed before Wi-Fi so an unsupported
 Bluetooth write does not also disconnect Wi-Fi. Every interface is reread;
@@ -99,9 +104,9 @@ native validation. No framework hang is reported as a successful request.
 
 ## Cohort compatibility
 
-Profile ABI1, Fn ABI2 and connection type`0x46583250` are a matching cohort.
+Profile ABI1, Fn ABI3 and connection type`0x46583250` are a matching cohort.
 The connection-type change rejects the earlier kext/client cohort before any
-command. The app also checks Fn batch version and both profile-helper
+command. The app also checks Fn ABI3 batch version and both profile-helper
 ABI/source identity and exact compiled binary hash. Rebuild all members.
 
 ## Build only on macOS
@@ -135,3 +140,25 @@ notifications invalidate pending app confirmations, and console/generation
 checks are repeated before actions. An already committed firmware request
 cannot be undone by a later session change; its current hardware state remains
 unknown. Authorization cancellation never triggers an automatic retry.
+
+The native binary also supports `--hardware-status` for read-only CLI capability
+checks. No menu automation or radio write is used by this command.
+
+Fn ABI3 adds ordered F7/F8 brightness actions. This machine delivered its dedicated
+F507/F508 events but macOS did not respond to the former top-case HID path. The
+app now adjusts the actual internal-panel bklt/brightness parameter by 1/16 of
+its range and reads it back; the kernel does not also send a brightness HID.
+Brightness repeats are drained in order, while power/radio actions remain bounded.
+
+## FX505GT field integration (2026-10-17)
+
+The site provisions the exact built fxprofile and fxradio as root-owned0755
+ordinary executables under /Library/PrivilegedHelperTools/. The radio path is
+org.fx505gt.fxradio; using the app bundle under the normal group-writable
+/Applications directory failed the existing ancestor checks.
+
+F11 posts org.fx505gt.sleep-request to the existing local.asus.platform.ui
+application, sharing its manual-sleep policy. The two independent settings are
+“合盖保持运行” (AsusSMC clamshell selector4, no global disablesleep change)
+and “一直保持运行” (global SleepDisabled). Manual sleep releases the latter
+until wake. See platform/README.md and the field report.

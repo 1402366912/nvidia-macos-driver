@@ -12,6 +12,7 @@ extern void FXInvalidateSessionActions();
 extern bool FXMicrophoneSupported();
 extern NSString *FXPerformSessionAction(uint32_t action,bool physicalEvent);
 extern bool FXPanelPowerSupported();
+extern bool FXReadItlwmPower(int &power);
 extern bool FXBluetoothEnabled();
 extern void FXEnableBluetooth(bool value);
 extern bool FXReadBluetooth(int &power);
@@ -32,6 +33,8 @@ static NSString *state(uint32_t s) {
     FXProfileSnapshot _snapshot;
     FXSessionBatch _lastEvents;
     NSStatusItem *_item;
+    NSPanel *_microphoneHUD;
+    NSTimer *_microphoneHUDTimer;
     NSTimer *_timer;
     NSString *_status, *_helperReason;
     BOOL _valid, _trusted, _listening, _claimed, _busy;
@@ -44,7 +47,9 @@ static NSString *state(uint32_t s) {
     if(geteuid()==0 || geteuid()!=getuid()) { NSLog(@"Run FX505GT Control as an ordinary console user with matching real/effective UIDs."); [NSApp terminate:nil]; return; }
     for(NSRunningApplication *app in [NSRunningApplication runningApplicationsWithBundleIdentifier:NSBundle.mainBundle.bundleIdentifier])
         if(app.processIdentifier!=NSProcessInfo.processInfo.processIdentifier) { [app activateWithOptions:NSApplicationActivateIgnoringOtherApps]; [NSApp terminate:nil]; return; }
-    _status=@"Source preview: hardware validation pending.";
+    _listening=[NSUserDefaults.standardUserDefaults boolForKey:@"HardwareFnEnabled"];
+    FXEnableBluetooth([NSUserDefaults.standardUserDefaults boolForKey:@"BluetoothCompanionEnabled"]);
+    _status=@"Fn controls ready; individual hardware capabilities are shown below.";
     _item=[[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength]; _item.button.title=@"FX505GT";
     _item.menu=[NSMenu new]; _item.menu.delegate=self;
     [[[NSWorkspace sharedWorkspace] notificationCenter] addObserver:self selector:@selector(sessionInactive:) name:NSWorkspaceSessionDidResignActiveNotification object:nil];
@@ -68,19 +73,44 @@ static NSString *state(uint32_t s) {
     (void)timer; if(_busy) return;
     if(NSProcessInfo.processInfo.systemUptime-_lastQuery>5) [self refresh];
     if(!_listening || !FXIsConsoleUser()) { if(_claimed) (void)_client.claim(false); _claimed=NO; return; }
-    if(!_claimed) { _claimed=_client.claim(true)==kIOReturnSuccess; if(!_claimed) return; }
+    if(!_claimed) {
+        const IOReturn result=_client.claim(true); _claimed=result==kIOReturnSuccess;
+        if(!_claimed) { _status=[NSString stringWithFormat:@"Fn claim unavailable: 0x%x",result]; return; }
+        NSLog(@"FN_CLAIM active abi=%u",FX_FN_ABI_VERSION);
+    }
     FXSessionBatch events {}; IOReturn result=_client.events(events);
     if(result!=kIOReturnSuccess) { _claimed=NO; _status=[NSString stringWithFormat:@"Fn consumer unavailable: 0x%x",result]; return; }
+    if(events.enabled!=_lastEvents.enabled || events.observedCount!=_lastEvents.observedCount)
+        NSLog(@"FN_STATUS enabled=%u observed=%u last=0x%x queued=%u",events.enabled,events.observedCount,events.lastObservedCode,events.count);
     _lastEvents=events;
-    // Consume once before dispatch. No requeue on failure/cancel, no action
-    // injection selector, no forwarding to another client. Only one action is
-    // acted on per poll: discard a burst rather than chain power/radio dialogs.
-    if(events.count) {
-        const auto route=fx::fnRoute(events.events[0].acpiCode);
-        if(!events.enabled || !route.recognized || route.action!=events.events[0].action || !route.action) { _status=@"Invalid dedicated Fn event refused."; return; }
-        _busy=YES; _status=FXPerformSessionAction(events.events[0].action,true); _busy=NO;
-        if(events.count>1) _status=[_status stringByAppendingString:@" Additional queued actions were discarded."];
+    // Drain ordered brightness repeats; at most one power/radio/session action.
+    bool sessionHandled=false;
+    for(uint32_t i=0;i<events.count;++i) {
+        const auto &event=events.events[i]; const auto route=fx::fnRoute(event.acpiCode);
+        if(!events.enabled || !route.recognized || route.action!=event.action || !route.action) continue;
+        const bool brightness=event.action==FXBrightnessDown || event.action==FXBrightnessUp;
+        if(!brightness && sessionHandled) continue;
+        _busy=YES; _status=FXPerformSessionAction(event.action,true); _busy=NO;
+        NSLog(@"FN_ACTION code=0x%x result=%@",event.acpiCode,_status);
+        if(event.action==FXMicrophoneMute) [self showMicrophoneResult:_status];
+        if(!brightness) sessionHandled=true;
     }
+}
+- (void)showMicrophoneResult:(NSString *)result {
+    BOOL muted=[result containsString:@"reports muted"], unmuted=[result containsString:@"reports unmuted"];
+    if(!muted && !unmuted) return;
+    if(!_microphoneHUD) {
+        _microphoneHUD=[[NSPanel alloc] initWithContentRect:NSMakeRect(0,0,160,100) styleMask:NSWindowStyleMaskBorderless|NSWindowStyleMaskNonactivatingPanel backing:NSBackingStoreBuffered defer:NO];
+        _microphoneHUD.opaque=NO; _microphoneHUD.backgroundColor=NSColor.clearColor; _microphoneHUD.hasShadow=YES; _microphoneHUD.ignoresMouseEvents=YES;
+        _microphoneHUD.level=NSStatusWindowLevel; _microphoneHUD.collectionBehavior=NSWindowCollectionBehaviorCanJoinAllSpaces|NSWindowCollectionBehaviorFullScreenAuxiliary;
+        NSVisualEffectView *view=[[NSVisualEffectView alloc] initWithFrame:NSMakeRect(0,0,160,100)]; view.material=NSVisualEffectMaterialHUDWindow;view.state=NSVisualEffectStateActive;view.wantsLayer=YES;view.layer.cornerRadius=18;view.layer.masksToBounds=YES;_microphoneHUD.contentView=view;
+        NSImageView *icon=[[NSImageView alloc] initWithFrame:NSMakeRect(60,42,40,40)];icon.tag=1;[view addSubview:icon];
+        NSTextField *text=[NSTextField labelWithString:@""];text.frame=NSMakeRect(5,14,150,22);text.alignment=NSTextAlignmentCenter;text.font=[NSFont systemFontOfSize:13 weight:NSFontWeightMedium];text.tag=2;[view addSubview:text];
+    }
+    if(@available(macOS 11.0,*)) ((NSImageView *)[_microphoneHUD.contentView viewWithTag:1]).image=[NSImage imageWithSystemSymbolName:muted?@"mic.slash.fill":@"mic.fill" accessibilityDescription:nil];
+    ((NSTextField *)[_microphoneHUD.contentView viewWithTag:2]).stringValue=muted?@"麦克风已静音":@"麦克风已恢复";
+    NSRect screen=NSScreen.mainScreen.visibleFrame;[_microphoneHUD setFrameOrigin:NSMakePoint(NSMidX(screen)-80,NSMinY(screen)+80)];[_microphoneHUD orderFrontRegardless];
+    [_microphoneHUDTimer invalidate];NSPanel *panel=_microphoneHUD;_microphoneHUDTimer=[NSTimer scheduledTimerWithTimeInterval:1.2 repeats:NO block:^(NSTimer *timer){(void)timer;[panel orderOut:nil];}];
 }
 - (BOOL)helperTrusted {
     NSString *reason=nil; BOOL trusted=FXHelperTrusted(&reason);
@@ -107,10 +137,10 @@ static NSString *state(uint32_t s) {
     [self add:@"Toggle internal-panel power" action:@selector(sessionAction:) tag:FXPanelPowerToggle enabled:FXIsConsoleUser() && FXPanelPowerSupported()];
     [self add:@"Sleep system…" action:@selector(sessionAction:) tag:FXSystemSleep enabled:FXIsConsoleUser()];
     [self add:@"Toggle Wi-Fi + Bluetooth…" action:@selector(sessionAction:) tag:FXRadiosToggle enabled:FXIsConsoleUser() && FXBluetoothEnabled()];
-    NSMenuItem *radio=[self add:@"Enable Bluetooth companion this launch…" action:@selector(toggleBluetooth:) tag:0 enabled:!_busy && FXIsConsoleUser()];
+    NSMenuItem *radio=[self add:@"Enable Bluetooth control…" action:@selector(toggleBluetooth:) tag:0 enabled:!_busy && FXIsConsoleUser()];
     radio.state=FXBluetoothEnabled()?NSControlStateValueOn:NSControlStateValueOff;
     [self add:@"Open Bluetooth settings" action:@selector(bluetooth:) tag:0 enabled:YES];
-    NSMenuItem *listen=[self add:@"Handle dedicated Fn session actions this launch" action:@selector(toggleListening:) tag:0 enabled:!_busy];
+    NSMenuItem *listen=[self add:@"Enable Fn shortcuts" action:@selector(toggleListening:) tag:0 enabled:!_busy];
     listen.state=_listening?NSControlStateValueOn:NSControlStateValueOff;
     [self add:_claimed?@"Fn consumer: exclusive console claim active":@"Fn consumer: inactive; no queued action replay" action:nullptr tag:0 enabled:NO];
     [menu addItem:NSMenuItem.separatorItem];
@@ -150,26 +180,23 @@ static NSString *state(uint32_t s) {
 }
 - (void)toggleListening:(id)sender {
     (void)sender; if(_busy) return;
-    if(_listening) { _listening=NO; FXInvalidateSessionActions(); (void)_client.claim(false); _claimed=NO; _status=@"Fn session actions disabled for this launch."; return; }
-    NSAlert *a=[NSAlert new]; a.messageText=@"Enable physical Fn actions for this launch?";
-    a.informativeText=@"Genuine dedicated Fn+F4/F6/F11/F12 events may mute input, toggle the internal panel, sleep this Mac, or change Wi-Fi/Bluetooth without another per-key confirmation. Radio control also requires its separate Bluetooth opt-in. Existing kernel HID keys are not duplicated. This session permission is not saved.";
-    [a addButtonWithTitle:@"Enable for this launch"]; [a addButtonWithTitle:@"Cancel"];
-    const uint64_t generation=FXSessionGeneration(); _busy=YES;
-    BOOL accepted=[a runModal]==NSAlertFirstButtonReturn; _busy=NO;
-    _listening=accepted && generation==FXSessionGeneration() && FXIsConsoleUser();
-    _status=_listening?@"Waiting for the dedicated Fn ABI 2 contract and exclusive console claim.":@"Fn listener remains disabled.";
+    _listening=!_listening;
+    [NSUserDefaults.standardUserDefaults setBool:_listening forKey:@"HardwareFnEnabled"];
+    if(!_listening) { FXInvalidateSessionActions(); (void)_client.claim(false); _claimed=NO; }
+    _status=_listening?@"Fn shortcuts enabled; preference saved.":@"Fn shortcuts disabled; preference saved.";
 }
 - (void)toggleBluetooth:(id)sender {
     (void)sender; if(_busy) return;
-    if(FXBluetoothEnabled()) { FXEnableBluetooth(false); FXInvalidateSessionActions(); _status=@"Bluetooth companion disabled; no radio state changed."; return; }
-    NSAlert *a=[NSAlert new]; a.messageText=@"Enable Bluetooth control for this launch?";
+    if(FXBluetoothEnabled()) { FXEnableBluetooth(false); [NSUserDefaults.standardUserDefaults setBool:NO forKey:@"BluetoothCompanionEnabled"]; FXInvalidateSessionActions(); _status=@"Bluetooth companion disabled; no radio state changed."; return; }
+    NSAlert *a=[NSAlert new]; a.messageText=@"Enable Bluetooth control?";
     a.informativeText=@"The source-built, hash-pinned companion uses the private power API documented by blueutil. macOS may ask for Bluetooth permission; you can deny it. No privacy setting is bypassed. Controller/OS compatibility is unverified. F12 can disconnect Wi-Fi and Bluetooth devices when the Fn listener is enabled.";
     [a addButtonWithTitle:@"Enable and check power"]; [a addButtonWithTitle:@"Cancel"];
     const uint64_t generation=FXSessionGeneration(); _busy=YES;
     if([a runModal]!=NSAlertFirstButtonReturn || generation!=FXSessionGeneration() || !FXIsConsoleUser()) { _busy=NO; _status=@"Bluetooth companion remains disabled."; return; }
     FXEnableBluetooth(true); int power=-1;
     if(!FXReadBluetooth(power) || generation!=FXSessionGeneration() || !FXIsConsoleUser()) { FXEnableBluetooth(false); _status=@"Bluetooth unavailable, permission denied, or timed out. Companion disabled; no radio changed."; }
-    else _status=power?@"Bluetooth controller and preference report On. Control enabled for this launch.":@"Bluetooth controller and preference report Off. Control enabled for this launch.";
+    else _status=power?@"Bluetooth controller and preference report On. Control enabled; preference saved.":@"Bluetooth controller and preference report Off. Control enabled; preference saved.";
+    [NSUserDefaults.standardUserDefaults setBool:FXBluetoothEnabled() forKey:@"BluetoothCompanionEnabled"];
     _busy=NO;
 }
 - (void)bluetooth:(id)sender {
@@ -178,14 +205,20 @@ static NSString *state(uint32_t s) {
     _status=opened?@"Bluetooth settings opened; no radio state is asserted.":@"Open Bluetooth settings manually; this OS did not accept the settings shortcut.";
 }
 - (void)diagnostics:(id)sender {
-    (void)sender; NSAlert *a=[NSAlert new]; a.messageText=@"FX505GT source preview";
-    a.informativeText=[NSString stringWithFormat:@"Native build and hardware validation are pending.\nProfile ABI %u; Fn ABI %u.\nLast request status=%u, raw status=%u, raw=0x%08x, IOReturn=0x%08x.\nLast observed Fn code=0x%x; observed=%u; dropped=%u.\nModel declaration is not physical verification. F6 requires a unique internal-panel dsyp 0..2 parameter. F12 requires explicit Bluetooth opt-in and controls enumerated Wi-Fi plus the default Bluetooth controller. Reports are OS/driver state, not physical panel or RF measurements. F4 needs settable CoreAudio input mute. Other Fn actions depend on the documented ACPI route and compatible macOS drivers.\nSource version: %s",FX_PROFILE_ABI_VERSION,FX_FN_ABI_VERSION,_snapshot.lastRequestStatus,_snapshot.lastWriteRawStatus,_snapshot.lastWriteRaw,_snapshot.lastWriteIOReturn,_lastEvents.lastObservedCode,_lastEvents.observedCount,_lastEvents.dropped,FX_SOURCE_VERSION];
+    (void)sender; NSAlert *a=[NSAlert new]; a.messageText=@"FX505GT diagnostics";
+    a.informativeText=[NSString stringWithFormat:@"Native components built; individual hardware results appear below.\nProfile ABI %u; Fn ABI %u.\nLast request status=%u, raw status=%u, raw=0x%08x, IOReturn=0x%08x.\nLast observed Fn code=0x%x; observed=%u; dropped=%u.\nModel declaration is not physical verification. F6 uses the unique internal-panel dsyp or bklt parameter. F12 requires explicit Bluetooth opt-in and controls enumerated Wi-Fi plus the default Bluetooth controller. Reports are OS/driver state, not physical panel or RF measurements. F4 needs settable CoreAudio input mute. Other Fn actions depend on the documented ACPI route and compatible macOS drivers.\nSource version: %s",FX_PROFILE_ABI_VERSION,FX_FN_ABI_VERSION,_snapshot.lastRequestStatus,_snapshot.lastWriteRawStatus,_snapshot.lastWriteRaw,_snapshot.lastWriteIOReturn,_lastEvents.lastObservedCode,_lastEvents.observedCount,_lastEvents.dropped,FX_SOURCE_VERSION];
     [a runModal];
 }
 - (void)quit:(id)sender { (void)sender; [NSApp terminate:nil]; }
 @end
 int main(int argc,const char **argv) {
-    (void)argc; (void)argv;
+    if(argc==2 && strcmp(argv[1],"--hardware-status")==0) {
+        @autoreleasepool {
+            int power=-1; const bool itlwm=FXReadItlwmPower(power);
+            printf("microphone_mute=%d internal_panel_toggle=%d itlwm_power_api=%d wifi_power=%d\n",FXMicrophoneSupported(),FXPanelPowerSupported(),itlwm,power);
+        }
+        return 0;
+    }
     @autoreleasepool {
         NSApplication *app=[NSApplication sharedApplication];
         __attribute__((objc_precise_lifetime)) FXMenu *delegate=[FXMenu new];

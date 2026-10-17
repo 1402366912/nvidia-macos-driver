@@ -1,0 +1,10 @@
+default=1682533920 status=0 device=69
+name=内建麦克风
+channel=0 mute_status=0 mute=0 gain_status=2003332927 gain=0.0000
+channel=1 mute_status=0 mute=0 gain_status=0 gain=0.5079
+channel=2 mute_status=0 mute=0 gain_status=0 gain=0.5079
+default=1682929012 status=0 device=78
+name=内建输出
+channel=0 mute_status=0 mute=0 gain_status=2003332927 gain=0.0000
+channel=1 mute_status=0 mute=0 gain_status=0 gain=0.6474
+channel=2 mute_status=0 mute=0 gain_status=0 gain=0.6474

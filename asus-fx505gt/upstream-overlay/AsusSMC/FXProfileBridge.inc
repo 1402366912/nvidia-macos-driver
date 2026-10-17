@@ -80,6 +80,10 @@ IOReturn AsusSMCProfileUserClient::externalMethod(uint32_t selector,
             return kIOReturnNotPrivileged;
         call.operation = FXGateCall::Set;
         call.profile = static_cast<uint32_t>(args->scalarInput[0]);
+    } else if (selector == FXSetClamshell) {
+        if(args->scalarInputCount!=1 || !args->scalarInput || args->scalarInput[0]>1 || args->structureOutputSize) return kIOReturnBadArgument;
+        if(clientHasPrivilege(ownerTask_,kIOClientPrivilegeAdministrator)!=kIOReturnSuccess || clientHasPrivilege(current_task(),kIOClientPrivilegeAdministrator)!=kIOReturnSuccess) return kIOReturnNotPrivileged;
+        call.operation=FXGateCall::SetClamshell; call.profile=static_cast<uint32_t>(args->scalarInput[0]); call.client=this;
     } else if (selector == FXClaimSession || selector == FXReadSession) {
         // "console" is the XNU console-user privilege string. Unsupported
         // implementations fail closed. Never accept a user-supplied UID.
@@ -147,6 +151,7 @@ IOReturn AsusSMC::fxGateAction(OSObject *owner, void *arg0, void *, void *, void
     if (!self || !call) return kIOReturnBadArgument;
     if (call->operation == FXGateCall::Stop) {
         self->fxReleaseSession();
+        if(self->fxLidClient) { if(auto root=self->getPMRootDomain()) root->receivePowerNotification(kIOPMEnableClamshell); self->fxLidClient=nullptr; self->setProperty("FX505GTLidSleepDisabled",false); }
         self->fxFullyAwake=false;
         self->fxRunning = false;
         self->fxPolicy.stop();
@@ -154,6 +159,7 @@ IOReturn AsusSMC::fxGateAction(OSObject *owner, void *arg0, void *, void *, void
     }
     if (call->operation == FXGateCall::ReleaseSession) {
         if (self->fxSessionClient == call->client) self->fxReleaseSession();
+        if(self->fxLidClient==call->client) { if(auto root=self->getPMRootDomain()) root->receivePowerNotification(kIOPMEnableClamshell); self->fxLidClient=nullptr; self->setProperty("FX505GTLidSleepDisabled",false); }
         return kIOReturnSuccess;
     }
     if (call->operation == FXGateCall::Initialize) {
@@ -176,6 +182,19 @@ IOReturn AsusSMC::fxGateAction(OSObject *owner, void *arg0, void *, void *, void
     }
     if (!self->fxRunning || self->isInactive() || !self->atkDevice ||
         self->atkDevice != self->getProvider()) return kIOReturnNotAttached;
+    if(call->operation==FXGateCall::SetClamshell) {
+        auto root=self->getPMRootDomain(); if(!root) return kIOReturnNotReady;
+        if(call->profile) {
+            if(self->fxLidClient && self->fxLidClient!=call->client) return kIOReturnExclusiveAccess;
+            IOReturn result=root->receivePowerNotification(kIOPMDisableClamshell);
+            if(result==kIOReturnSuccess) { self->fxLidClient=call->client; self->setProperty("FX505GTLidSleepDisabled",true); }
+            return result;
+        }
+        if(self->fxLidClient!=call->client) return kIOReturnSuccess;
+        IOReturn result=root->receivePowerNotification(kIOPMEnableClamshell);
+        if(result==kIOReturnSuccess) { self->fxLidClient=nullptr; self->setProperty("FX505GTLidSleepDisabled",false); }
+        return result;
+    }
     if (call->operation == FXGateCall::Suspend) {
         self->fxPolicy.suspend();
         self->fxFullyAwake=false; self->fxReleaseSession();
@@ -187,6 +206,7 @@ IOReturn AsusSMC::fxGateAction(OSObject *owner, void *arg0, void *, void *, void
             ((call->powerFlags & 2u) || (!call->powerFlags && !call->powerFrom)) &&
             (call->powerTo & 3u)==3u;
         if (!self->fxFullyAwake) self->fxReleaseSession();
+        else if(self->fxLidClient) { if(auto root=self->getPMRootDomain()) root->receivePowerNotification(kIOPMDisableClamshell); }
         return kIOReturnSuccess;
     }
     if (call->operation == FXGateCall::Message) {

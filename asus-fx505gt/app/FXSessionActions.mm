@@ -10,9 +10,38 @@
 extern bool FXPanelPowerSupported();
 extern void FXForgetPanelPower();
 extern NSString *FXTogglePanelPower();
+extern NSString *FXAdjustPanelBrightness(int direction);
 extern bool FXBluetoothEnabled();
 extern bool FXReadBluetooth(int &power);
 extern bool FXWriteBluetooth(int target);
+// Independently declared itlwm legacy POWER ABI: ClientKit/Common.h and
+// IoctlId.h at AirportItlwm-AX211 030ef90b (version1, selector2, set bit23).
+// This is the existing HeliPort control path, not a raw/AWDL session.
+struct FXItlPower { uint32_t version, enabled, maxsleep; };
+static IOReturn itlPower(int target, int &power) {
+    io_iterator_t iterator=IO_OBJECT_NULL;
+    IOReturn result=IOServiceGetMatchingServices(kIOMasterPortDefault,IOServiceMatching("itlwm"),&iterator);
+    if(result!=kIOReturnSuccess) return result;
+    io_service_t service=IOIteratorNext(iterator), extra=IOIteratorNext(iterator); IOObjectRelease(iterator);
+    if(!service || extra) { if(service) IOObjectRelease(service); if(extra) IOObjectRelease(extra); return kIOReturnNotFound; }
+    io_connect_t connection=IO_OBJECT_NULL;
+    result=IOServiceOpen(service,mach_task_self(),0,&connection); IOObjectRelease(service);
+    if(result!=kIOReturnSuccess) return result;
+    FXItlPower state {}; size_t size=sizeof(state);
+    result=IOConnectCallStructMethod(connection,2,nullptr,0,&state,&size);
+    if(result==kIOReturnSuccess && (size!=sizeof(state) || state.version!=1 || state.enabled>1)) result=kIOReturnBadMessageID;
+    if(result==kIOReturnSuccess && target>=0) {
+        state.enabled=static_cast<uint32_t>(target);
+        result=IOConnectCallStructMethod(connection,0x800002,&state,sizeof(state),nullptr,nullptr);
+        if(result==kIOReturnSuccess) {
+            size=sizeof(state); result=IOConnectCallStructMethod(connection,2,nullptr,0,&state,&size);
+            if(result==kIOReturnSuccess && (size!=sizeof(state) || state.version!=1 || state.enabled!=static_cast<uint32_t>(target))) result=kIOReturnNotReady;
+        }
+    }
+    if(result==kIOReturnSuccess) power=static_cast<int>(state.enabled);
+    IOServiceClose(connection); return result;
+}
+bool FXReadItlwmPower(int &power) { return itlPower(-1,power)==kIOReturnSuccess; }
 static uint64_t sessionGeneration=0; // Main-thread only.
 uint64_t FXSessionGeneration() { return sessionGeneration; }
 void FXInvalidateSessionActions() { ++sessionGeneration; FXForgetPanelPower(); }
@@ -57,18 +86,32 @@ NSString *FXPerformSessionAction(uint32_t action,bool physicalEvent) {
             return wanted ? @"Default input device reports muted. This does not cover other recording devices." : @"Default input device reports unmuted.";
         }
         case FXPanelPowerToggle: return FXTogglePanelPower();
+        case FXBrightnessDown: return FXAdjustPanelBrightness(-1);
+        case FXBrightnessUp: return FXAdjustPanelBrightness(1);
         case FXSystemSleep: {
             if(!physicalEvent && !confirm(@"Put this Mac to sleep?",@"This sends a real system-sleep request, not only an on-screen icon.")) return @"Sleep cancelled.";
             if(generation!=FXSessionGeneration() || !FXIsConsoleUser()) return @"Sleep cancelled after session change.";
-            io_connect_t root=IOPMFindPowerManagement(MACH_PORT_NULL);
-            if(!root) return @"Power-management service unavailable.";
-            IOReturn result=IOPMSleepSystem(root); IOServiceClose(root);
-            return result==kIOReturnSuccess ? @"System-sleep request accepted; actual sleep depends on macOS." : [NSString stringWithFormat:@"System-sleep request failed: 0x%x",result];
+            if(![NSRunningApplication runningApplicationsWithBundleIdentifier:@"local.asus.platform.ui"].count)
+                return @"Open 华硕控制 first; it owns the unified sleep/lid policy.";
+            [[NSDistributedNotificationCenter defaultCenter] postNotificationName:@"org.fx505gt.sleep-request" object:nil userInfo:nil deliverImmediately:YES];
+            return @"Sleep requested through 华硕控制; its existing lid policy will be restored after wake.";
         }
         case FXRadiosToggle: {
-            if(!FXBluetoothEnabled()) return @"Radio control is disabled. Enable the Bluetooth companion for this launch first.";
+            if(!FXBluetoothEnabled()) return @"Radio control is disabled. Enable Bluetooth control first.";
             NSArray<CWInterface *> *interfaces=[[CWWiFiClient sharedWiFiClient] interfaces];
-            if(!interfaces.count || interfaces.count>8) return @"Unsupported: no bounded set of CoreWLAN interfaces. No radio changed.";
+            if(!interfaces.count) {
+                int wifi=-1, bluetooth=-1;
+                if(!FXReadItlwmPower(wifi)) return @"Neither CoreWLAN nor the itlwm POWER interface is available. No radio changed.";
+                if(!FXReadBluetooth(bluetooth)) return @"Bluetooth power unavailable. No radio changed.";
+                const int target=fx::nextRadioPower(wifi!=0,bluetooth);
+                if(!physicalEvent && !confirm(target?@"Turn Wi-Fi and Bluetooth on?":@"Turn Wi-Fi and Bluetooth off?",@"Uses itlwm/HeliPort power control and the default Bluetooth controller. Network connections may disconnect.")) return @"Radio request cancelled.";
+                if(generation!=FXSessionGeneration() || !FXIsConsoleUser()) return @"Radio request cancelled after session change.";
+                if(bluetooth!=target && !FXWriteBluetooth(target)) return @"Bluetooth request failed; Wi-Fi unchanged.";
+                if(wifi!=target && itlPower(target,wifi)!=kIOReturnSuccess) return @"Partial result: itlwm Wi-Fi request failed or readback differed.";
+                if(!FXReadBluetooth(bluetooth) || bluetooth!=target || !FXReadItlwmPower(wifi) || wifi!=target) return @"Radio readback differs; current states are unverified.";
+                return target?@"itlwm Wi-Fi and Bluetooth report On.":@"itlwm Wi-Fi and Bluetooth report Off.";
+            }
+            if(interfaces.count>8) return @"Unsupported: too many CoreWLAN interfaces. No radio changed.";
             NSMutableSet<NSString *> *names=[NSMutableSet set]; NSMutableDictionary<NSString *,NSNumber *> *beforePower=[NSMutableDictionary dictionary]; bool anyOn=false;
             for(CWInterface *wifi in interfaces) {
                 if(!wifi.interfaceName.length || [names containsObject:wifi.interfaceName]) return @"Wi-Fi interface identity is ambiguous. No radio changed.";

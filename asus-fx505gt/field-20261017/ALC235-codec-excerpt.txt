@@ -1,0 +1,5 @@
+ HDA Codec #0: Realtek (Unknown)
+ HDA Codec ID: 0x10ec0235
+PCI Subvendor: 0x1ab11043
+VHDevice NID=18 Config=90a60130 (pin: Microphon) Cap=00000020 Ctrl=00000000 -- Conns:
+VHDevice NID=20 Config=90170110 (pin: Speaker () Cap=00010014 Ctrl=00000000 -- Conns: 0=12

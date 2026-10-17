@@ -1,0 +1,31 @@
+{
+  "provenance": "Observed CLI kmutil and system_profiler after audio reboot; connection interrupted before subsequent codec/default-output operations",
+  "loaded_kext": "org.voodoo.driver.VoodooHDA",
+  "version": "3.6.8",
+  "uuid": "E25BA5AD-4F0F-31BB-BADD-A6C29E861FDB",
+  "devices": [
+    {
+      "name": "Realtek (Unknown): Speaker (Analog)",
+      "output_channels": 2,
+      "sample_rate": 48000
+    },
+    {
+      "name": "Realtek (Unknown): Headphones (Black Front)",
+      "default_output": true,
+      "default_system_output": true,
+      "output_channels": 2,
+      "sample_rate": 48000
+    },
+    {
+      "name": "Realtek (Unknown): Microphone (Digital)",
+      "default_input": true,
+      "input_channels": 2,
+      "sample_rate": 48000
+    }
+  ],
+  "pending": [
+    "Select internal speaker as default output",
+    "Read codec vendor/device ID",
+    "Physical speaker/microphone result"
+  ]
+}

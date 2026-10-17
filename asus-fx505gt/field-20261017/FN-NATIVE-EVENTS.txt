@@ -1,0 +1,8 @@
+2026-10-17 09:15:56.045 FX505GTControl[1345:9892] FN_STATUS enabled=1 observed=3 last=0xf504 queued=1
+2026-10-17 09:15:56.053 FX505GTControl[1345:9892] FN_ACTION code=0xf504 result=Default input device reports muted. This does not cover other recording devices.
+2026-10-17 09:15:56.814 FX505GTControl[1345:9892] FN_STATUS enabled=1 observed=4 last=0xf504 queued=1
+2026-10-17 09:15:56.819 FX505GTControl[1345:9892] FN_ACTION code=0xf504 result=Default input device reports unmuted.
+2026-10-17 09:15:57.308 FX505GTControl[1345:9892] FN_STATUS enabled=1 observed=5 last=0xf504 queued=1
+2026-10-17 09:15:57.316 FX505GTControl[1345:9892] FN_ACTION code=0xf504 result=Default input device reports muted. This does not cover other recording devices.
+2026-10-17 09:15:57.810 FX505GTControl[1345:9892] FN_STATUS enabled=1 observed=6 last=0xf504 queued=1
+2026-10-17 09:15:57.819 FX505GTControl[1345:9892] FN_ACTION code=0xf504 result=Default input device reports unmuted.

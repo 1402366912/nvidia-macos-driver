@@ -97,6 +97,7 @@ private:
         uint8_t flags;
     };
 
+    AsusSMCProfileUserClient *fxLidClient {nullptr};
     struct wmi_args {
         uint32_t arg0;
         uint32_t arg1;
