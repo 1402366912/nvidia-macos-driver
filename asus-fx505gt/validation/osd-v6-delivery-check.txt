@@ -1,0 +1,3 @@
+PASS: current tracked component manifest validates after source-v6 reconciliation.
+PASS: strict manifest rejects changed, missing and extra fixture files.
+Scope: source integrity only; native build/deployment/runtime not run.

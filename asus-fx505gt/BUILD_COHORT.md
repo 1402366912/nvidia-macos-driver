@@ -52,7 +52,7 @@ The entry:
    It exports selected content-addressed Git blobs rather than copying worktrees,
    ignored files, Git credentials/configuration, CI files or symlinks.
 2. Stages the exact expanded AsusSMC overlay; checks its before/after hashes and
-   shared ABI bytes. It verifies profile ABI 1, Fn ABI 2 and connection cohort
+   shared ABI bytes. It verifies profile ABI 1, Fn ABI 3 and connection cohort
    `0x46583250` against the input manifest.
 3. Stages SDK header source under the historical resource search paths. This is
    **not a runnable Lilu.kext/VirtualSMC.kext distribution**. Two unreferenced Lilu
@@ -141,3 +141,17 @@ replay intentionally rejects it.
 - BIOS303 SSDT offline ACPICA validation: existing pass, unchanged source.
 - Native Xcode final linkage, Objective-C++ app/helper builds, installation,
   permissions and physical Fn/fan/display/radio behavior: **pending**.
+
+## Existing platform application dependency
+
+This build entry creates the Fn app and its pinned profile/radio companions.
+It deliberately does not provision a login item, privileged helper, sudoers
+rule or the existing `local.asus.platform.ui` application. The field setup
+already supplies those separately. F11 notification dispatch requires that
+platform application running; see `platform/README.md` for its source build
+and fixed helper paths. A new machine needs a separately authorized deployment,
+not just this source build. The OSD adds no second sleep/lid owner.
+
+After a source change, the delivery manifest must be regenerated from the
+reviewed tracked component files before using this guarded entry. Do not
+bypass hash checks or include generated caches/output in the source manifest.
