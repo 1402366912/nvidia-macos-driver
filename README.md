@@ -1,6 +1,6 @@
 # NullMoth NVIDIA Driver for macOS
 
-## Current source progress (2026-11-08 08:50 UTC+08:00)
+## Current source progress (2026-11-08 10:55 UTC+08:00)
 
 - Branch: `main`; source-only update, no new binary package.
 - OpenCL program-to-function selection now includes the selected kernel entry in the cache identity, so distinct entries in one program no longer reuse the first cached function. Existing synchronization and program construction are unchanged. See [the source](plugin/NVMTLGL.m) and [file history](../../commits/main/plugin/NVMTLGL.m).
@@ -9,7 +9,7 @@
 - Remaining work: native integration of this change and the full program selection, dispatch, completion and result-readback path. This cache correction alone does not establish an end-to-end GPU or desktop result.
 
 - Backend source now refuses dependent GPU commands after a failed managed-upload prologue and reports actually omitted draw/dispatch work as an encoding failure. A binding failure that is corrected before drawing remains recoverable; uncertain in-flight resources are retained.
-- Texture transfers now address 3D mip slices correctly, generate mips across all array/cube layers and shrinking volume depths, and establish GPU producer dependencies for standalone image uploads/readbacks even when the layout stays unchanged. Mixed volume/non-volume copies remain unsupported.
+- Texture transfers now address 3D mip slices correctly, generate mips across all array/cube layers and shrinking volume depths, and establish GPU producer dependencies for standalone image uploads/readbacks even when the layout stays unchanged. Single-slice 2D/array-to-3D and 3D-to-2D/array copies are now enabled when the selected physical device reports Vulkan core 1.1 or newer. The existing region mapping uses z for the volume and arrayLayer for the 2D side. Older devices and mixed 1D copies remain unsupported. CPU command-capture validation covers both directions and retained rejection paths; native GPU image results are not verified. See the [Khronos copy rules](https://docs.vulkan.org/guide/latest/image_copies.html#_2d_array_and_3d).
 - Validation: the existing local CPU C control-flow and command-capture fixtures passed for these changed paths. They are not native macOS builds, Vulkan validation-layer results, or GPU pixel/readback evidence. See [backend source](plugin/nvmtl_vk.c) and [backend history](../../commits/main/plugin/nvmtl_vk.c).
 - Next mainline work: derive indirect-dispatch grid dimensions at GPU execution time through paired runtime/translator integration, rather than trusting stale CPU-visible argument bytes. Full native dispatch/completion/readback integration remains unverified.
 
