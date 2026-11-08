@@ -208,7 +208,8 @@ static BOOL nvmtl_sel1_idle(int *r) { return __atomic_load_n(r, __ATOMIC_ACQUIRE
     }
     unsigned char h[CC_SHA256_DIGEST_LENGTH]; CC_SHA256_CTX c; CC_SHA256_Init(&c);
     CC_SHA256_Update(&c, "cl", 2); CC_SHA256_Update(&c, air.bytes, (CC_LONG)air.length); CC_SHA256_Update(&c, pd.bytes, (CC_LONG)pd.length); CC_SHA256_Final(h, &c);
-    NSData *key = [NSData dataWithBytes:h length:sizeof h];
+    // Keep the selected kernel entry in the function cache identity.
+    NSArray *key = @[[NSData dataWithBytes:h length:sizeof h], [_fname copy]];
     static NSMutableDictionary *cache; static NSObject *lock; static dispatch_once_t once;
     dispatch_once(&once, ^{ cache = [NSMutableDictionary new]; lock = [NSObject new]; });
     @synchronized(lock) { id hit = cache[key]; if (hit) return hit; }
