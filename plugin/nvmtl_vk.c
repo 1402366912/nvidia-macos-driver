@@ -6933,6 +6933,12 @@ int nvmtl_vk_cmd_copy_image_sub(nvk_cmdbuf *c, nvk_image *src, uint32_t sl, uint
         return -1;
     }
 
+    const int same_image = src->img == dst->img;
+    if (same_image && sl == dl && ss == ds
+        && sx < dx + w && dx < sx + w && sy < dy + h && dy < sy + h) {
+        nvlog("copy_image_sub: overlapping regions of the same image are not supported");
+        return -1;
+    }
     const VkImageAspectFlags aspects = nvmtl_barrier_aspect(src);
     VkImageCopy regions[2]; uint32_t count = 0;
     for (VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -6944,17 +6950,26 @@ int nvmtl_vk_cmd_copy_image_sub(nvk_cmdbuf *c, nvk_image *src, uint32_t sl, uint
                                          { (int32_t)dx, (int32_t)dy, dst->mtl_type == 7 ? (int32_t)ds : 0 }, { w, h, 1 } };
     }
     nvmtl_vk_cmd_barrier(c);
-    img_to(c, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+    // A single image cannot simultaneously use both transfer-only layouts.
+    // GENERAL permits non-overlapping in-place slice, mip and region copies.
+    const VkImageLayout src_layout = same_image ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    const VkImageLayout dst_layout = same_image ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    img_to(c, src, src_layout, VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
+           same_image ? VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT : VK_ACCESS_TRANSFER_READ_BIT,
            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-    img_to(c, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-           VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-    pvkCmdCopyImage(c->cb, (VkImage)src->img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                   (VkImage)dst->img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, count, regions);
-    img_to(c, dst, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+    if (same_image) dst->layout = src->layout;
+    else img_to(c, dst, dst_layout, VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    pvkCmdCopyImage(c->cb, (VkImage)src->img, src_layout,
+                   (VkImage)dst->img, dst_layout, count, regions);
+    img_to(c, dst, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+           same_image ? VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT : VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
            VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    if (same_image) src->layout = dst->layout;
     nvmtl_vk_cmd_barrier(c);
     return 0;
 }
+
 int nvmtl_vk_image_view_create_range(nvk_image *img, uint32_t vkfmt, int a8, uint32_t baseLevel, uint32_t levelCount,
                                      uint32_t baseLayer, uint32_t layerCount, uint32_t mtl_view_type, void **out_view)
 {
