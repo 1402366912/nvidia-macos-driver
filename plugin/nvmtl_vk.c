@@ -2531,11 +2531,11 @@ static VkDescriptorSet nvmtl_snapshot_set_md(nvk_cmdbuf *c, uint32_t which, uint
             unsigned cap = c->capsets ? c->capsets * 2 : 64;
             nvk_setref *grown = (nvk_setref *)realloc(c->sets, cap * sizeof *grown);
             if (grown) { c->sets = grown; c->capsets = cap; }
-            else { c->dcache[c->ndcache++] = (void *)set; c->skipped++; return VK_NULL_HANDLE; }
+            else { c->dcache[c->ndcache++] = (void *)set; return VK_NULL_HANDLE; }
         }
     } else {
         pthread_mutex_lock(&g_desc_lock);
-        if (ensure_descriptors_locked()) { pthread_mutex_unlock(&g_desc_lock); c->skipped++; return VK_NULL_HANDLE; }
+        if (ensure_descriptors_locked()) { pthread_mutex_unlock(&g_desc_lock); return VK_NULL_HANDLE; }
         unsigned n = nvmtl_desc_batch();
         VkDescriptorSetLayout ls[NVMTL_DESC_BATCH_MAX];
         VkDescriptorSet got[NVMTL_DESC_BATCH_MAX];
@@ -2577,7 +2577,7 @@ static VkDescriptorSet nvmtl_snapshot_set_md(nvk_cmdbuf *c, uint32_t which, uint
     }
     if (r != VK_SUCCESS) {
         nvlog("vk: descriptor set allocation FAILED (%d) with %u pools — this draw is SKIPPED, not recorded blind", r, g_ndescPools);
-        c->skipped++; return VK_NULL_HANDLE;
+        return VK_NULL_HANDLE;
     }
     c->sets[c->nsets++] = (nvk_setref){ pool, set };
     VkWriteDescriptorSet w[NVMTL_NBIND];
@@ -2588,7 +2588,7 @@ static VkDescriptorSet nvmtl_snapshot_set_md(nvk_cmdbuf *c, uint32_t which, uint
     VkBufferView tv[NVMTL_NBIND];
     VkDescriptorBufferInfo addressInfo;
     if (!g_mutable) tb = NULL;
-    if (NVMTL_E78_HAS(mask, NVMTL_ADDRESS_BINDING) && nvmtl_address_snapshot(c, which, &addressInfo)) { c->skipped++; return VK_NULL_HANDLE; }
+    if (NVMTL_E78_HAS(mask, NVMTL_ADDRESS_BINDING) && nvmtl_address_snapshot(c, which, &addressInfo)) { return VK_NULL_HANDLE; }
     VkDescriptorBufferInfo dummyB = { (VkBuffer)g_dummyBuf.buf, 0, VK_WHOLE_SIZE };
     VkDescriptorImageInfo  dummyI = { VK_NULL_HANDLE, (VkImageView)g_dummyImg.view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
     VkDescriptorImageInfo  dummyS = { g_dummySampler, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_UNDEFINED };
@@ -3911,7 +3911,7 @@ void nvmtl_vk_cmd_dispatch_threads(nvk_cmdbuf *c, nvk_pipeline *p, const uint32_
     for (int d = 0; d < 3; d++) { if (!tgIn[d] || !threads[d]) return; tg[d] = tgIn[d]; groups[d] = (threads[d] + tg[d] - 1) / tg[d]; }
     if (!(p = nvmtl_align_guard_pick(c, p))) { c->skipped++; return; }
     VkDescriptorSet s[3] = { nvmtl_snapshot_set_c(c, 0, p), nvmtl_snapshot_set_c(c, 1, p), g_heapSet };
-    if (!s[0] || !s[1]) { c->nobind = 1; return; }
+    if (!s[0] || !s[1]) { c->nobind = 1; c->skipped++; return; }
     c->nobind = 0;
     int bound = 0;
     for (uint32_t mask = 0; mask < 8; mask++) {
@@ -3961,7 +3961,7 @@ void nvmtl_vk_cmd_dispatch_indirect_tg(nvk_cmdbuf *c, nvk_pipeline *p, nvk_buffe
     VkPipeline vp = nvmtl_compute_variant(p, tg);
     if (!vp) { c->skipped++; return; }
     VkDescriptorSet s[3] = { nvmtl_snapshot_set_c(c, 0, p), nvmtl_snapshot_set_c(c, 1, p), g_heapSet };
-    if (!s[0] || !s[1]) { c->nobind = 1; return; }
+    if (!s[0] || !s[1]) { c->nobind = 1; c->skipped++; return; }
     c->nobind = 0;
     if (b->map && off + 12 <= b->size) memcpy(g, (const char *)b->map + off, 12);
     else { static int said; if (!said++) nvlog("vk: indirect dispatch grid is not CPU-visible — a kernel asking [[threads_per_grid]] reads 0"); }
@@ -3976,7 +3976,7 @@ void nvmtl_vk_cmd_dispatch(nvk_cmdbuf *c, nvk_pipeline *p, uint32_t gx, uint32_t
     pvkCmdBindPipeline(c->cb, VK_PIPELINE_BIND_POINT_COMPUTE, (VkPipeline)p->pipe);
     VkDescriptorSet s[3] = { nvmtl_snapshot_set_t(c, 0, p->stex_hi[0], p->tbany ? p->tbm[0] : NULL),
                              nvmtl_snapshot_set_t(c, 1, p->stex_hi[1], p->tbany ? p->tbm[1] : NULL), g_heapSet };
-    if (!s[0] || !s[1]) { c->nobind = 1; return; }
+    if (!s[0] || !s[1]) { c->nobind = 1; if (gx && gy && gz) c->skipped++; return; }
     c->nobind = 0;
     pvkCmdBindDescriptorSets(c->cb, VK_PIPELINE_BIND_POINT_COMPUTE, (VkPipelineLayout)p->layout, 0, g_heapSet ? 3 : 2, s, nvmtl_table_ubo() ? 2 : 0, g_dyn_zero);
     // This path reads WorkgroupId raw (no base push constants), so it cannot be chunked. Past the device's group
@@ -4748,7 +4748,7 @@ int nvmtl_vk_cmd_clear_image(nvk_cmdbuf *c, nvk_image *img, const float clear[4]
 }
 
 void nvmtl_vk_cmd_draw(nvk_cmdbuf *c, uint32_t first, uint32_t count, uint32_t instances, uint32_t baseInstance)
-{ if (c->nobind) return; pvkCmdDraw(c->cb, count, instances ? instances : 1, first, baseInstance); }
+{ if (c->nobind) { if (count) c->skipped++; return; } pvkCmdDraw(c->cb, count, instances ? instances : 1, first, baseInstance); }
 void nvmtl_vk_cmd_set_scissor(nvk_cmdbuf *c, int32_t x, int32_t y, uint32_t w, uint32_t h)
 { VkRect2D r = { { x, y }, { w, h } }; pvkCmdSetScissor(c->cb, 0, 1, &r); }
 void nvmtl_vk_cmd_bind_pipeline(nvk_cmdbuf *c, nvk_pipeline *p) { pvkCmdBindPipeline(c->cb, VK_PIPELINE_BIND_POINT_GRAPHICS, (VkPipeline)p->pipe); }
@@ -4796,7 +4796,7 @@ void nvmtl_vk_cmd_draw_indexed(nvk_cmdbuf *c, nvk_buffer *idx, size_t offset, ui
                                uint32_t instances, int32_t baseVertex, uint32_t baseInstance)
 {
     pvkCmdBindIndexBuffer(c->cb, (VkBuffer)idx->buf, offset, is32 ? VK_INDEX_TYPE_UINT32 : VK_INDEX_TYPE_UINT16);
-    if (c->nobind) return;
+    if (c->nobind) { if (count) c->skipped++; return; }
     pvkCmdDrawIndexed(c->cb, count, instances ? instances : 1, 0, baseVertex, baseInstance);
 }
 
@@ -5015,6 +5015,13 @@ int nvmtl_vk_submit_begin_at(nvk_cmdbuf *c, nvmtl_inflight *f, const char *who)
     memset(f, 0, sizeof *f); f->c = c;
     uint64_t *const pt = f->pt;
     if (g_state != 1 || !c || !c->cb) return -2;
+    // Encoding dropped a required draw/dispatch (pipeline or bindings failed).
+    // Do not submit a partial workload and report its fence as full success.
+    if (c->skipped) {
+        nvlog("vk: refusing submission with %u skipped encoding operations", c->skipped);
+        nvmtl_cmd_retire(c);
+        return -1;
+    }
     if (c->counter_error || nvmtl_counter_flush(c)) { nvmtl_cmd_retire(c); return -1; }
     VkCommandBuffer counter_reset = VK_NULL_HANDLE;
     if (nvmtl_counter_reset_finish(c, &counter_reset)) { nvmtl_cmd_retire(c); return -1; }
@@ -5054,8 +5061,17 @@ int nvmtl_vk_submit_begin_at(nvk_cmdbuf *c, nvmtl_inflight *f, const char *who)
         }
         if (pre->n && pr == VK_SUCCESS) cbs[ncb++] = pre->cb.cb;
         else {
-            if (pre->n) { g_pre_fail++; nvlog("vk: pre-submit prologue End -> %d - %u uploads/fills (%llu bytes) LOST, the GPU keeps the old bytes", pr, pre->n, pre->bytes); }
+            const int upload_failed = pre->n && pr != VK_SUCCESS;
+            if (upload_failed) { g_pre_fail++; nvlog("vk: pre-submit prologue End -> %d - refusing dependent commands after %u uploads/fills (%llu bytes) failed", pr, pre->n, pre->bytes); }
             nvmtl_cmd_retire(&pre->cb); nvmtl_pre_drop(pre); pre->begun = 0;
+            if (upload_failed) {
+                // Neither command buffer has entered the queue. Do not execute
+                // the consumer with old bytes or report its fence as success.
+                pthread_mutex_unlock(&nvmtl_submit_mutex);
+                pvkDestroyFence(g_dev, fence, NULL);
+                nvmtl_cmd_retire(c);
+                return -1;
+            }
         }
     }
     cbs[ncb++] = c->cb;
@@ -5470,7 +5486,7 @@ static void img_to(nvk_cmdbuf *c, nvk_image *img, VkImageLayout to,
                    VkAccessFlags srcA, VkAccessFlags dstA, VkPipelineStageFlags srcS, VkPipelineStageFlags dstS)
 {
     if ((VkImageLayout)img->layout == to) return;
-    VkImageSubresourceRange r = { nvmtl_barrier_aspect(img), 0, img->mips ? img->mips : 1, 0, img->layers ? img->layers : 1 };
+    VkImageSubresourceRange r = { nvmtl_barrier_aspect(img), 0, img->mips ? img->mips : 1, 0, img->mtl_type == 7 ? 1u : (img->layers ? img->layers : 1u) };
     VkImageMemoryBarrier b = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, NULL, srcA, dstA,
         (VkImageLayout)img->layout, to, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, (VkImage)img->img, r };
     nvmtl_sample_pattern pattern = c->sample_pattern;
@@ -5528,12 +5544,16 @@ int nvmtl_vk_image_write_region_level_layer(nvk_queue *q, nvk_image *img, const 
     uint8_t *dst = (uint8_t *)stage.map;
     for (uint32_t r = 0; r < rows; r++) memcpy(dst + (size_t)r * cols * bpp, (const uint8_t *)src + (size_t)r * row_bytes, (size_t)cols * bpp);
     nvk_cmdbuf c; if (nvmtl_vk_cmd_begin(q, &c)) return -1;
-    img_to(&c, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, VK_ACCESS_TRANSFER_WRITE_BIT,
-           VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    // A prior compute/render/transfer producer may have left this image in
+    // the same layout. img_to then emits no barrier, so synchronize access
+    // independently from the layout transition before the CPU transfer.
+    nvmtl_vk_cmd_barrier(&c);
+    img_to(&c, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+           VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
     VkBufferImageCopy bic = { 0, 0, 0, { nvmtl_copy_aspect(img), level, img->mtl_type == 7 ? 0u : layer, 1 }, { (int32_t)x, (int32_t)y, img->mtl_type == 7 ? (int32_t)layer : 0 }, { w, h, 1 } };
     pvkCmdCopyBufferToImage(c.cb, (VkBuffer)stage.buf, (VkImage)img->img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bic);
     img_to(&c, img, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-           VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+           VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
     return nvmtl_vk_submit_wait(&c);
 }
 
@@ -5553,8 +5573,12 @@ int nvmtl_vk_image_read_region_level_layer(nvk_queue *q, nvk_image *img, void *d
     nvk_buffer stage;
     if (nvmtl_vk_stage(q, (size_t)cols * rows * bpp, &stage)) return -1;
     nvk_cmdbuf c; if (nvmtl_vk_cmd_begin(q, &c)) return -1;
-    img_to(&c, img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_READ_BIT,
-           VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    // A prior compute/render/transfer producer may have left this image in
+    // the same layout. img_to then emits no barrier, so synchronize access
+    // independently from the layout transition before the CPU transfer.
+    nvmtl_vk_cmd_barrier(&c);
+    img_to(&c, img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+           VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
     VkBufferImageCopy bic = { 0, 0, 0, { nvmtl_copy_aspect(img), level, img->mtl_type == 7 ? 0u : layer, 1 }, { (int32_t)x, (int32_t)y, img->mtl_type == 7 ? (int32_t)layer : 0 }, { w, h, 1 } };
     pvkCmdCopyImageToBuffer(c.cb, (VkImage)img->img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, (VkBuffer)stage.buf, 1, &bic);
     if (nvmtl_vk_submit_wait(&c)) return -1;
@@ -5598,11 +5622,11 @@ int nvmtl_vk_copy_image_to_buffer_layer(nvk_queue *q, nvk_image *img, uint32_t x
 }
 
 void nvmtl_vk_cmd_draw_indirect(nvk_cmdbuf *c, nvk_buffer *b, size_t off)
-{ if (c->nobind) return; pvkCmdDrawIndirect(c->cb, (VkBuffer)b->buf, off, 1, 0); }
+{ if (c->nobind) { c->skipped++; return; } pvkCmdDrawIndirect(c->cb, (VkBuffer)b->buf, off, 1, 0); }
 int nvmtl_vk_cmd_draw_patches(nvk_cmdbuf *c, const nvk_pipeline *p, uint64_t fac, uint32_t istride, float scale, uint64_t cpx, uint64_t pix,
                               uint32_t start, uint32_t count, uint32_t instances, uint32_t baseInstance, nvk_buffer *ind, size_t indoff)
 {
-    if (c->nobind) return 0;
+    if (c->nobind) { if (ind || count) c->skipped++; return -1; }
     if (!p || !p->tess || !fac) return -1;
     struct { uint64_t fac, cpx, pix; uint32_t istride; float scale; uint64_t vb[NVMTL_TESS_NVB]; } pc;
     _Static_assert(sizeof pc == NVMTL_TESS_PC_BYTES, "the TESC's push-constant block is 96 bytes, offsets 0/8/16/24/28/32");
@@ -5627,13 +5651,13 @@ int nvmtl_vk_cmd_draw_patches(nvk_cmdbuf *c, const nvk_pipeline *p, uint64_t fac
 void nvmtl_vk_cmd_draw_indexed_indirect(nvk_cmdbuf *c, nvk_buffer *idx, size_t idxOff, int is32, nvk_buffer *b, size_t off)
 {
     pvkCmdBindIndexBuffer(c->cb, (VkBuffer)idx->buf, idxOff, is32 ? VK_INDEX_TYPE_UINT32 : VK_INDEX_TYPE_UINT16);
-    if (c->nobind) return;
+    if (c->nobind) { c->skipped++; return; }
     pvkCmdDrawIndexedIndirect(c->cb, (VkBuffer)b->buf, off, 1, 0);
 }
 void nvmtl_vk_cmd_dispatch_indirect(nvk_cmdbuf *c, nvk_pipeline *p, nvk_buffer *b, size_t off)
 {
     pvkCmdBindPipeline(c->cb, VK_PIPELINE_BIND_POINT_COMPUTE, (VkPipeline)p->pipe);
-    if (c->nobind) return;
+    if (c->nobind) { c->skipped++; return; }
     pvkCmdDispatchIndirect(c->cb, (VkBuffer)b->buf, off);
 }
 
@@ -6340,30 +6364,35 @@ int nvmtl_vk_cmd_image_gen_mipmaps(nvk_cmdbuf *c, nvk_image *img)
     nvmtl_vk_cmd_barrier(c);
     img_to(c, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    // Vulkan volumes have one array layer and a shrinking depth extent;
+    // arrays and cube textures keep all layers at every mip level.
+    const uint32_t layers = img->mtl_type == 7 ? 1u : (img->layers ? img->layers : 1u);
     int32_t mw = (int32_t)img->w, mh = (int32_t)img->h;
+    int32_t md = img->mtl_type == 7 ? (int32_t)(img->layers ? img->layers : 1u) : 1;
     for (uint32_t i = 1; i < img->mips; i++) {
-        VkImageSubresourceRange src = { VK_IMAGE_ASPECT_COLOR_BIT, i - 1, 1, 0, 1 };
+        VkImageSubresourceRange src = { VK_IMAGE_ASPECT_COLOR_BIT, i - 1, 1, 0, layers };
         VkImageMemoryBarrier toSrc = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, NULL,
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, (VkImage)img->img, src };
         pvkCmdPipelineBarrier(c->cb, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &toSrc);
         int32_t nw = mw > 1 ? mw / 2 : 1, nh = mh > 1 ? mh / 2 : 1;
-        VkImageBlit b = { { VK_IMAGE_ASPECT_COLOR_BIT, i - 1, 0, 1 }, { { 0, 0, 0 }, { mw, mh, 1 } },
-                          { VK_IMAGE_ASPECT_COLOR_BIT, i,     0, 1 }, { { 0, 0, 0 }, { nw, nh, 1 } } };
+        int32_t nd = md > 1 ? md / 2 : 1;
+        VkImageBlit b = { { VK_IMAGE_ASPECT_COLOR_BIT, i - 1, 0, layers }, { { 0, 0, 0 }, { mw, mh, md } },
+                          { VK_IMAGE_ASPECT_COLOR_BIT, i,     0, layers }, { { 0, 0, 0 }, { nw, nh, nd } } };
         pvkCmdBlitImage(c->cb, (VkImage)img->img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                         (VkImage)img->img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &b, VK_FILTER_LINEAR);
-        mw = nw; mh = nh;
+        mw = nw; mh = nh; md = nd;
     }
     VkImageMemoryBarrier fin[2] = {
         { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, NULL, VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
           VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, (VkImage)img->img,
-          { VK_IMAGE_ASPECT_COLOR_BIT, 0, img->mips - 1, 0, 1 } },
+          { VK_IMAGE_ASPECT_COLOR_BIT, 0, img->mips - 1, 0, layers } },
         { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, NULL, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
           VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, (VkImage)img->img,
-          { VK_IMAGE_ASPECT_COLOR_BIT, img->mips - 1, 1, 0, 1 } },
+          { VK_IMAGE_ASPECT_COLOR_BIT, img->mips - 1, 1, 0, layers } },
     };
     pvkCmdPipelineBarrier(c->cb, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 2, fin);
     img->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -6877,13 +6906,23 @@ int nvmtl_vk_cmd_copy_image_sub(nvk_cmdbuf *c, nvk_image *src, uint32_t sl, uint
 {
     if (!c || !src || !dst || !w || !h || src->fmt != dst->fmt
         || (src->samples ? src->samples : 1) != (dst->samples ? dst->samples : 1)
-        || ss >= (src->layers ? src->layers : 1) || ds >= (dst->layers ? dst->layers : 1)
         || sl >= (src->mips ? src->mips : 1) || dl >= (dst->mips ? dst->mips : 1)) {
         nvlog("copy_image_sub: incompatible format/sample count or invalid subresource");
         return -1;
     }
+    // Cross-dimensional copies require maintenance1/core 1.1 support on the
+    // selected physical device. Instance API selection alone does not prove
+    // that capability; keep this slice-copy path within matching dimensions.
+    if ((src->mtl_type == 7) != (dst->mtl_type == 7)) {
+        nvlog("copy_image_sub: mixed volume/non-volume copies are not enabled");
+        return -1;
+    }
     const uint32_t sw = nvmtl_lvl(src->w, sl), sh = nvmtl_lvl(src->h, sl);
     const uint32_t dw = nvmtl_lvl(dst->w, dl), dh = nvmtl_lvl(dst->h, dl);
+    // layers carries base-level depth for a 3D image, not Vulkan array layers.
+    const uint32_t src_slices = src->mtl_type == 7 ? nvmtl_lvl(src->layers ? src->layers : 1, sl) : (src->layers ? src->layers : 1);
+    const uint32_t dst_slices = dst->mtl_type == 7 ? nvmtl_lvl(dst->layers ? dst->layers : 1, dl) : (dst->layers ? dst->layers : 1);
+    if (ss >= src_slices || ds >= dst_slices) return -1;
     if (sx > sw || w > sw - sx || sy > sh || h > sh - sy
         || dx > dw || w > dw - dx || dy > dh || h > dh - dy) {
         nvlog("copy_image_sub: region outside selected mip extent");
@@ -6895,8 +6934,10 @@ int nvmtl_vk_cmd_copy_image_sub(nvk_cmdbuf *c, nvk_image *src, uint32_t sl, uint
     for (VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
          aspect <= VK_IMAGE_ASPECT_STENCIL_BIT; aspect <<= 1) {
         if (!(aspects & aspect)) continue;
-        regions[count++] = (VkImageCopy){ { aspect, sl, ss, 1 }, { (int32_t)sx, (int32_t)sy, 0 },
-                                         { aspect, dl, ds, 1 }, { (int32_t)dx, (int32_t)dy, 0 }, { w, h, 1 } };
+        regions[count++] = (VkImageCopy){ { aspect, sl, src->mtl_type == 7 ? 0u : ss, 1 },
+                                         { (int32_t)sx, (int32_t)sy, src->mtl_type == 7 ? (int32_t)ss : 0 },
+                                         { aspect, dl, dst->mtl_type == 7 ? 0u : ds, 1 },
+                                         { (int32_t)dx, (int32_t)dy, dst->mtl_type == 7 ? (int32_t)ds : 0 }, { w, h, 1 } };
     }
     nvmtl_vk_cmd_barrier(c);
     img_to(c, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_TRANSFER_READ_BIT,
