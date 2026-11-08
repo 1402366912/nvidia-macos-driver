@@ -1,12 +1,17 @@
 # NullMoth NVIDIA Driver for macOS
 
-## Current source progress (2026-11-08 08:44 UTC+08:00)
+## Current source progress (2026-11-08 08:50 UTC+08:00)
 
 - Branch: `main`; source-only update, no new binary package.
 - OpenCL program-to-function selection now includes the selected kernel entry in the cache identity, so distinct entries in one program no longer reuse the first cached function. Existing synchronization and program construction are unchanged. See [the source](plugin/NVMTLGL.m) and [file history](../../commits/main/plugin/NVMTLGL.m).
 - Native macOS compilation and GPU execution of this change have not been verified. Earlier hardware and release claims below are historical baseline evidence, not validation of this update.
 - Build entry: `RELEASE=1 build/build_plugin.sh`, with the existing translator and NVK components described below. No GitHub Actions are used.
 - Remaining work: native integration of this change and the full program selection, dispatch, completion and result-readback path. This cache correction alone does not establish an end-to-end GPU or desktop result.
+
+- Backend source now refuses dependent GPU commands after a failed managed-upload prologue and reports actually omitted draw/dispatch work as an encoding failure. A binding failure that is corrected before drawing remains recoverable; uncertain in-flight resources are retained.
+- Texture transfers now address 3D mip slices correctly, generate mips across all array/cube layers and shrinking volume depths, and establish GPU producer dependencies for standalone image uploads/readbacks even when the layout stays unchanged. Mixed volume/non-volume copies remain unsupported.
+- Validation: the existing local CPU C control-flow and command-capture fixtures passed for these changed paths. They are not native macOS builds, Vulkan validation-layer results, or GPU pixel/readback evidence. See [backend source](plugin/nvmtl_vk.c) and [backend history](../../commits/main/plugin/nvmtl_vk.c).
+- Next mainline work: derive indirect-dispatch grid dimensions at GPU execution time through paired runtime/translator integration, rather than trusting stale CPU-visible argument bytes. Full native dispatch/completion/readback integration remains unverified.
 
 ## Historical project documentation
 
