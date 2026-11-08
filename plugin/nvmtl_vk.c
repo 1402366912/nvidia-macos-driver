@@ -65,6 +65,7 @@ static inline const char *nvmtl_icd_lib_path(void) {
 
 static void *g_lib;
 static int g_sample_loader_unwrapped;
+static uint32_t g_device_api_version;
 static VkInstance g_inst; static VkPhysicalDevice g_pdev; static VkDevice g_dev; static VkQueue g_queue;
 static int g_host_query_reset, g_occlusion_precise;
 static int g_atomic64_buffer, g_atomic64_shared;
@@ -617,6 +618,7 @@ static int nvmtl_vk_initialize(void)
     VkPhysicalDeviceProperties pp; pvkGetPhysicalDeviceProperties(g_pdev, &pp);
     snprintf(g_name, sizeof g_name, "%s", pp.deviceName);
     g_lim = pp.limits;
+    g_device_api_version = pp.apiVersion;
     { VkPhysicalDeviceShaderSMBuiltinsPropertiesNV sm = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_SM_BUILTINS_PROPERTIES_NV };
       VkPhysicalDeviceProperties2 p2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &sm };
       pvkGetPhysicalDeviceProperties2(g_pdev, &p2); g_sm_count = sm.shaderSMCount;
@@ -6910,12 +6912,14 @@ int nvmtl_vk_cmd_copy_image_sub(nvk_cmdbuf *c, nvk_image *src, uint32_t sl, uint
         nvlog("copy_image_sub: incompatible format/sample count or invalid subresource");
         return -1;
     }
-    // Cross-dimensional copies require maintenance1/core 1.1 support on the
-    // selected physical device. Instance API selection alone does not prove
-    // that capability; keep this slice-copy path within matching dimensions.
+    // Core 1.1 supports 2D array layers <-> 3D depth slices. Gate on the
+    // selected physical device, not the instance's requested API version.
     if ((src->mtl_type == 7) != (dst->mtl_type == 7)) {
-        nvlog("copy_image_sub: mixed volume/non-volume copies are not enabled");
-        return -1;
+        const uint32_t flat_type = src->mtl_type == 7 ? dst->mtl_type : src->mtl_type;
+        if (g_device_api_version < VK_API_VERSION_1_1 || flat_type < 2) {
+            nvlog("copy_image_sub: mixed volume copies require core 1.1 and a 2D image");
+            return -1;
+        }
     }
     const uint32_t sw = nvmtl_lvl(src->w, sl), sh = nvmtl_lvl(src->h, sl);
     const uint32_t dw = nvmtl_lvl(dst->w, dl), dh = nvmtl_lvl(dst->h, dl);
