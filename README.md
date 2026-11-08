@@ -1,5 +1,15 @@
 # NullMoth NVIDIA Driver for macOS
 
+## Current source progress (2026-11-08 08:44 UTC+08:00)
+
+- Branch: `main`; source-only update, no new binary package.
+- OpenCL program-to-function selection now includes the selected kernel entry in the cache identity, so distinct entries in one program no longer reuse the first cached function. Existing synchronization and program construction are unchanged. See [the source](plugin/NVMTLGL.m) and [file history](../../commits/main/plugin/NVMTLGL.m).
+- Native macOS compilation and GPU execution of this change have not been verified. Earlier hardware and release claims below are historical baseline evidence, not validation of this update.
+- Build entry: `RELEASE=1 build/build_plugin.sh`, with the existing translator and NVK components described below. No GitHub Actions are used.
+- Remaining work: native integration of this change and the full program selection, dispatch, completion and result-readback path. This cache correction alone does not establish an end-to-end GPU or desktop result.
+
+## Historical project documentation
+
 A Metal driver for NVIDIA Turing-and-later cards on Intel Macs and OpenCore systems running **macOS 15 Sequoia**.
 The device table includes GTX 16, RTX 20/30/40/50, TITAN RTX, and supported Quadro/RTX workstation cards.
 The driver implements NVIDIA-backed display and Metal interfaces. Feature availability and application behavior depend on the card, operating-system version and installed components; device-table coverage is not runtime qualification.
